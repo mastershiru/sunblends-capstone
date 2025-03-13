@@ -1,0 +1,317 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap");
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  padding: 0;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
+  transition: 0.5s;
+  background-color: #fff;
+}
+
+.navbar-collapse {
+  display: none;
+  padding: 20px;
+}
+.navbar-float {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 2px 6px rgba(100, 95, 136, 0.15);
+  z-index: 1070;
+}
+.scale-in-ver-top {
+  animation: scale-in-ver-top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+@keyframes scale-in-ver-top {
+  0% {
+    transform: scaleY(0);
+    transform-origin: 100% 0%;
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    transform-origin: 100% 0%;
+    opacity: 1;
+  }
+}
+
+nav a .logo {
+  width: 100px;
+  cursor: pointer;
+  text-decoration: none;
+}
+#navbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+#navbar li {
+  list-style: none;
+  padding: 0 20px;
+  position: relative;
+  top: 15px;
+}
+#navbar li a {
+  font-family: "Poppins", sans-serif;
+  text-decoration: none;
+  font-size: 1.1rem;
+  color: black;
+  transition: 0.3s;
+  border-radius: 30px;
+  justify-content: center;
+  align-items: center;
+  font-weight: 200;
+  padding: 5px 10px;
+}
+#navbar li a:hover {
+  box-shadow: 8px 8px 12px rgba(0, 0, 0, 0.2) inset;
+}
+.for-mobile {
+  display: none;
+}
+.header-search-form .form-input {
+  font-size: 14px;
+  padding-right: 40px;
+  width: 200px;
+  height: 40px;
+}
+.header-search-form {
+  position: relative;
+  top: 15px;
+}
+.for-des {
+  display: block !important;
+}
+.header-search-form button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(0, -50%);
+  width: 48px;
+  height: 100%;
+  opacity: 0.5;
+}
+.header-search-form .form-input {
+  font-size: 14px;
+  padding-right: 40px;
+  width: 200px;
+  height: 40px;
+}
+
+.form-input::placeholder {
+  color: rgba(70 69 71 / 0.7);
+}
+
+.form-input {
+  width: 100%;
+  height: 50px;
+  outline: none !important;
+  padding: 10px 15px;
+  color: #0d0d25;
+  border-radius: 10px;
+  border: none;
+  box-shadow: inset 6px 6px 8px #dadada, inset -6px -6px 8px #ffffff;
+}
+.header-btn {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  justify-content: center;
+  border-radius: 10px;
+  position: relative;
+  margin-left: 10px;
+  transition: 0.3s;
+  box-shadow: inset 6px 6px 7px #dadada, inset -6px -6px 7px #ffffff;
+  top: 15px;
+  align-items: center;
+  background-color: #ffff;
+}
+
+.cart-number {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  font-size: 12px;
+  border: 1px solid #bfbfbf;
+  color: #ff8243;
+}
+
+#user {
+  position: relative;
+}
+
+/* Dropdown content */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 66px;
+  right: -1px;
+  background-color: #ffffff;
+  width: 130px;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding: 20px 0;
+}
+.pen-icon {
+  position: absolute;
+  top: 52px;
+  right: 39px;
+  font-size: 18px;
+  color: #333;
+  cursor: pointer;
+  background-color: white;
+  padding: 3px;
+  border-radius: 50%;
+}
+.swing-in-top-fwd {
+  animation: swing-in-top-fwd 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@keyframes swing-in-top-fwd {
+  0% {
+    transform: rotateX(-100deg);
+    transform-origin: top;
+    opacity: 0;
+  }
+  100% {
+    transform: rotateX(0deg);
+    transform-origin: top;
+    opacity: 1;
+  }
+}
+
+/* Show dropdown content when the dropdown-open class is present */
+.dropdown-open {
+  display: block;
+}
+
+.dropdown-content button {
+  color: rgb(0, 0, 0);
+  display: flex;
+  position: relative;
+  border-radius: 30px;
+  justify-content: center;
+  font-weight: 100;
+  width: 100px;
+  border: none;
+  left: 10%;
+  background-color: transparent;
+  padding: 5px;
+}
+
+.dropdown-content button:hover {
+  box-shadow: 8px 8px 12px rgba(0, 0, 0, 0.2) inset;
+}
+
+#mobile {
+  display: none;
+}
+
+/* .bar-icon {
+  color: #3b3b46;
+  background-color: transparent;
+  font-size: 20px;
+  border: 1px solid transparent;
+} */
+
+@media (max-width: 991px) {
+  nav {
+    padding: 0;
+    box-shadow: 0px 10px 55px #d4d4d4;
+    width: 100%;
+  }
+  .dropdown-content {
+    top: 62px;
+  }
+}
+@media screen and (max-width: 769px) {
+  .navbar-collapse {
+    display: block;
+  }
+  nav {
+    justify-content: space-between;
+    padding: 0px 40px;
+  }
+  #navbar {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    position: fixed;
+    top: 80px;
+    right: -318px;
+    width: 300px;
+    height: 100vh;
+    background-color: #f3f3f5;
+    padding: 40px 0 0 10px;
+    transition: 0.3s ease-in-out;
+    box-shadow: rgba(0, 0, 0, 0.09) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px,
+      rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px,
+      rgba(0, 0, 0, 0.09) 0px 32px 16px;
+  }
+  #navbar li {
+    top: 12%;
+    margin-bottom: 15px;
+  }
+  .for-mobile {
+    display: block;
+  }
+  .for-mobile button {
+    background-color: transparent;
+    border: none;
+    font-family: "Poppins", sans-serif;
+    font-size: 1.1rem;
+    transition: 0.3s;
+    border-radius: 30px;
+    font-weight: 200;
+    padding: 5px 10px;
+  }
+  .for-mobile button:hover {
+    box-shadow: 8px 8px 12px rgba(0, 0, 0, 0.2) inset;
+  }
+  #navbar.active {
+    right: 0px;
+  }
+  #mobile {
+    position: relative;
+    display: block;
+    background-color: transparent;
+    top: 10px;
+    cursor: pointer;
+  }
+  #mobile a {
+    font-size: 30px;
+  }
+  #mobile i {
+    border-radius: 20px;
+    padding: 10px;
+  }
+  .header-btn {
+    top: -230px;
+    left: -5px;
+    width: 60px;
+    height: 60px;
+  }
+  .header-btn i {
+    font-size: 30px;
+  }
+  #user {
+    display: none;
+  }
+}
