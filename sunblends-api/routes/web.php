@@ -43,6 +43,10 @@ Route::middleware(['employee_view'])->group(function () {
         return view('Transaction_Dashboard');
     });
 
+    Route::get('/Sales', function () {
+        return view('sale_dashboard');
+    });
+
 });
 
 // For guest and customers

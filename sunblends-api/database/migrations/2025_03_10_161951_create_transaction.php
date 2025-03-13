@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('transaction_id');
             $table->string('transaction_reference')->unique();
             $table->unsignedBigInteger('order_id');
-            $table->unsignedBigInteger('customer_id');
+            $table->unsignedBigInteger('customer_id')->nullable();
             
             
             $table->decimal('cash_amount', 10, 2);

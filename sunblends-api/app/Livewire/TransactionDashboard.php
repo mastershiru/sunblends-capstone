@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\Customer;
 
 class TransactionDashboard extends Component
 {
@@ -98,12 +99,14 @@ class TransactionDashboard extends Component
     {
         // Total transactions
         $this->totalTransactions = Transaction::count();
-        $this->totalAmount = Transaction::sum('cash_amount');
+        $this->totalAmount = Transaction::where('transaction_status', 'completed')->sum('cash_amount');
         
         // Today's transactions
         $today = Carbon::today()->format('Y-m-d');
         $this->todayTransactions = Transaction::whereDate('transaction_date', $today)->count();
-        $this->todayAmount = Transaction::whereDate('transaction_date', $today)->sum('cash_amount');
+        $this->todayAmount = Transaction::whereDate('transaction_date', $today)
+                                        ->where('transaction_status', 'completed')
+                                        ->sum('cash_amount');
     }
     
     /**
