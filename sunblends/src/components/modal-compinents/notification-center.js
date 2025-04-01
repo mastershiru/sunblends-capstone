@@ -37,6 +37,11 @@ const NotificationsCenter = () => {
     }
   };
 
+  const isNotificationRead = (notification) => {
+    // Check both possible properties for read status
+    return Boolean(notification.read_at || notification.read);
+  };
+
   // Helper to get appropriate color for status
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -197,24 +202,28 @@ const NotificationsCenter = () => {
                   padding: "1rem",
                   borderBottom: "1px solid #f3f4f6",
                   cursor: "pointer",
-                  backgroundColor: notification.read_at
+                  backgroundColor: isNotificationRead(notification)
                     ? "transparent"
-                    : "rgba(255, 130, 67, 0.05)",
+                    : "rgba(255, 130, 67, 0.1)",
                   display: "flex",
                   gap: "1rem",
                   transition: "background-color 0.2s",
                   borderRadius: "0.25rem",
                   margin: "0.25rem 0",
+                  // Add left border for unread notifications
+                  borderLeft: isNotificationRead(notification)
+                    ? "none"
+                    : "3px solid #ff8243",
                 }}
                 onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = notification.read_at
+                  (e.currentTarget.style.backgroundColor = isNotificationRead(notification)
                     ? "#f9fafb"
-                    : "rgba(255, 130, 67, 0.1)")
+                    : "rgba(255, 130, 67, 0.15)")
                 }
                 onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor = notification.read_at
+                  (e.currentTarget.style.backgroundColor = isNotificationRead(notification)
                     ? "transparent"
-                    : "rgba(255, 130, 67, 0.05)")
+                    : "rgba(255, 130, 67, 0.1)")
                 }
               >
                 <div
