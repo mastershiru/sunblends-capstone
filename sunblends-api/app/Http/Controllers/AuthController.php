@@ -3,138 +3,287 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use App\Models\Admin;
 use App\Models\Customer;
-use Laravel\Socialite\Facades\Socialite; // Import Socialite
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    // Customer login--------------------------------------------------------------------------------------------------------------------------------
-    public function customerLogin(Request $request)
-{
-    // Validate input
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
+    /**
+     * Refresh the user's session based on customer_id
+     */
+    public function refreshSession(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id' => 'required|numeric',
+        ]);
 
-    // Check if validation fails
-    if ($validator->fails()) {
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid request',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        $customer = Customer::find($request->customer_id);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found'
+            ], 404);
+        }
+        
+        // PRIORITIZE CUSTOMER-TOKEN CHECK
+        $hasCustomerToken = $customer->tokens()->where('name', 'customer-token')->exists();
+        
+        // Log for debugging
+        \Log::info("Token refresh request", [
+            'customer_id' => $customer->customer_id,
+            'has_customer_token' => $hasCustomerToken
+        ]);
+        
+        // If customer-token doesn't exist, and this is a refresh attempt (not initial login),
+        // require a full re-authentication
+        if (!$hasCustomerToken && $request->has('is_refresh') && $request->is_refresh) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session expired. Please login again',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // Only check expiration if customer-token exists
+        if ($hasCustomerToken) {
+            // Check if tokens are expired based on dates
+            $tokenMaxAge = config('sanctum.expiration', 60 * 24); // Default 24 hours in minutes
+            $tokenCreationThreshold = now()->subMinutes($tokenMaxAge);
+            
+            $hasValidCustomerToken = $customer->tokens()
+                ->where('name', 'customer-token')
+                ->where('created_at', '>=', $tokenCreationThreshold)
+                ->exists();
+            
+            if (!$hasValidCustomerToken && $request->has('is_refresh') && $request->is_refresh) {
+                // Customer token exists but is expired, delete it and require re-auth
+                $customer->tokens()->where('name', 'customer-token')->delete();
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session expired due to inactivity. Please login again',
+                    'require_reauth' => true
+                ], 401);
+            }
+        }
+        
+        // If we got here, either:
+        // 1. The customer-token exists and is valid, or
+        // 2. This isn't a refresh request (it's an initial login)
+        
+        // Clean up tokens if requested to prevent accumulation
+        $recentTokens = $customer->tokens()
+        ->where('name', 'customer-token')
+        ->orderByDesc('created_at')
+        ->take(2)
+        ->pluck('id');
+        
+        // Delete all other customer-tokens
+        $customer->tokens()
+        ->where('name', 'customer-token')
+        ->whereNotIn('id', $recentTokens)
+        ->delete();
+
+        if ($request->has('clean_tokens') && $request->clean_tokens) {
+            // Delete all tokens EXCEPT customer-token
+            $customer->tokens()->where('name', '!=', 'customer-token')->delete();
+        }
+        
+        // Always create a new customer-token (previous one remains valid until expiry)
+        $token = $customer->createToken('customer-token')->plainTextToken;
+        
         return response()->json([
-            'message' => 'Validation failed',
-            'errors' => $validator->errors()
-        ], 400); // Return 400 Bad Request if validation fails
-    }
-
-    // Find the customer by email
-    $customer = Customer::where('Customer_Email', $request->email)->first();
-
-    // Check if customer exists and the password is correct
-    if ($customer && Hash::check($request->password, $customer->Customer_Password)) {
-        // Generate API token
-        $token = $customer->createToken('customer_auth_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login Successfully',
+            'success' => true,
             'token' => $token,
-            'customer' => $customer
-        ], 200);
+            'user' => $customer,
+            'message' => 'Session refreshed successfully'
+        ]);
     }
 
-    // If the credentials don't match, return an error message
-    return response()->json(['message' => 'Invalid credentials'], 401); // Return 401 Unauthorized if login fails
-}
-
-    // Admin login--------------------------------------------------------------------------------------------------------------------------------
-    public function adminLogin(Request $request)
-{
-    $credentials = $request->only('Admin_Name', 'Admin_Password');
-
-    // Find admin by name in the admin_acc table
-    $admin = Admin::where('Admin_Name', $credentials['Admin_Name'])->first();
-
-    if ($admin && Hash::check($credentials['Admin_Password'], $admin->Admin_Password)) {
-        $token = $admin->createToken('admin_auth_token')->plainTextToken;
-        return response()->json(['message' => 'Admin login successful', 'token' => $token, 'admin' => $admin]);
+    public function validateToken(Request $request)
+    {
+        // Get the auth token from the header
+        $bearerToken = $request->bearerToken();
+        
+        if (!$bearerToken) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'No token provided',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // Get token parts - Laravel Sanctum tokens have format: "id|token_hash"
+        $tokenParts = explode('|', $bearerToken);
+        
+        // Check if the token has the correct format
+        if (count($tokenParts) !== 2) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid token format',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        $tokenId = $tokenParts[0];
+        $tokenHash = hash('sha256', $tokenParts[1]); // Hash the second part
+        
+        // Find the token in the database directly
+        $token = \Laravel\Sanctum\PersonalAccessToken::where('id', $tokenId)
+            ->where('token', $tokenHash)
+            ->first();
+        
+        if (!$token) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Token not found in database',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // IMPORTANT: Check if this is specifically a customer-token
+        // This is the key part that matches your desired logic
+        if ($token->name !== 'customer-token') {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid token type',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // Extra check - get the user/customer associated with the token
+        $tokenable = $token->tokenable;
+        
+        if (!$tokenable) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Token owner not found',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // If we made it here, the token is valid and exists in the database
+        return response()->json([
+            'valid' => true,
+            'user_id' => $tokenable->customer_id ?? $tokenable->id
+        ]);
     }
 
-    return response()->json(['message' => 'Invalid credentials'], 401);
-}
-
-// Google login--------------------------------------------------------------------------------------------------------------------------------
-public function googleLogin(Request $request)
-{
-    // Validate incoming request
-    $validated = Validator::make($request->all(), [
-        'Customer_Name' => 'required|string',
-        'Customer_Email' => 'required|email',
-        'Customer_Img' => 'nullable|string'
-    ]);
-
-    if ($validated->fails()) {
-        return response()->json(['message' => 'Invalid data', 'errors' => $validated->errors()], 400);
+    public function checkTokenType(Request $request)
+    {
+        // Get the auth token from the request
+        $bearerToken = $request->header('Authorization');
+        
+        if (!$bearerToken || !str_starts_with($bearerToken, 'Bearer ')) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'No token provided',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // Extract token from Authorization header
+        $bearerToken = trim(str_replace('Bearer ', '', $bearerToken));
+        
+        // Get token parts - Laravel Sanctum tokens have format: "id|token_hash"
+        $tokenParts = explode('|', $bearerToken);
+        
+        // Check if the token has the correct format
+        if (count($tokenParts) !== 2) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid token format',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        $tokenId = $tokenParts[0];
+        
+        // Find the token in the database directly
+        $token = \Laravel\Sanctum\PersonalAccessToken::find($tokenId);
+        
+        if (!$token) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Token not found in database',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // Check if this is a customer-token
+        return response()->json([
+            'valid' => $token->name === 'customer-token',
+            'token_type' => $token->name,
+            'user_id' => $token->tokenable_id
+        ]);
     }
 
-    // Default password 
-    $defaultPassword = 'password123';
-
-    // Check if customer already exists or create a new one
-    $customer = Customer::firstOrCreate(
-        ['Customer_Email' => $request->Customer_Email],  // Find by email
-        [
-            'Customer_Name' => $request->Customer_Name,
-            'Customer_Password' => Hash::make($defaultPassword),  // Hash default password
-            'Customer_Img' => $request->Customer_Img,
-            'Customer_Number' => 'N/A',  // Or provide some default value for Customer_Number
-        ]
-    );
-
-    // Generate token for the user (if using Sanctum or Passport)
-    $token = $customer->createToken('auth_token')->plainTextToken;
-
-    return response()->json([
-        'message' => 'Logged in with Google successfully',
-        'token' => $token,
-        'user' => $customer
-    ]);
-}
-
-// Register--------------------------------------------------------------------------------------------------------------------------------
-public function register(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'Customer_Name' => 'required|string|max:255',
-        'Customer_Email' => 'required|email|unique:customer,Customer_Email',
-        'Customer_Number' => 'nullable|string|max:20',
-        'Customer_Password' => 'required|string|min:6|confirmed',
-        'Customer_Img' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json(['errors' => $validator->errors()], 400);
+    public function checkToken(Request $request)
+    {
+        // Get the auth token from the request
+        $bearerToken = $request->header('Authorization');
+        
+        if (!$bearerToken || !str_starts_with($bearerToken, 'Bearer ')) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'No token provided',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // Extract token from Authorization header
+        $bearerToken = trim(str_replace('Bearer ', '', $bearerToken));
+        
+        // Get token parts - Laravel Sanctum tokens have format: "id|token_hash"
+        $tokenParts = explode('|', $bearerToken);
+        
+        // Check if the token has the correct format
+        if (count($tokenParts) !== 2) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid token format',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        $tokenId = $tokenParts[0];
+        $tokenHash = hash('sha256', $tokenParts[1]); // Hash the second part
+        
+        // Find the token in the database directly
+        $token = \Laravel\Sanctum\PersonalAccessToken::where('id', $tokenId)
+            ->where('token', $tokenHash)
+            ->first();
+        
+        if (!$token) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Token not found in database',
+                'require_reauth' => true
+            ], 401);
+        }
+        
+        // Token exists and is valid
+        return response()->json([
+            'valid' => true,
+            'user_id' => $token->tokenable_id
+        ]);
     }
 
-    // Handle Image Upload
-    $imagePath = null;
-    if ($request->hasFile('Customer_Img')) {
-        $imagePath = $request->file('Customer_Img')->store('uploads', 'public');
+    public function revokeTokens(Request $request)
+    {
+        $request->user()->tokens()->delete();
+        return response()->json(['success' => true]);
     }
 
-    // Create Customer
-    $customer = Customer::create([
-        'Customer_Name' => $request->Customer_Name,
-        'Customer_Email' => $request->Customer_Email,
-        'Customer_Number' => $request->Customer_Number,
-        'Customer_Password' => Hash::make($request->Customer_Password),
-        'Customer_Img' => $imagePath,
-    ]);
-
-    return response()->json([
-        'message' => 'Customer registered successfully',
-        'customer' => $customer,
-    ], 201);
-}
 }

@@ -85,6 +85,7 @@ class SalesDashboard extends Component
     public function updatedDateRange()
     {
         $this->setDateRange($this->dateRange);
+        $this->dispatch('chartsUpdated');
     }
     
     /**
@@ -94,12 +95,14 @@ class SalesDashboard extends Component
     {
         $this->dateRange = 'custom';
         $this->calculateStats();
+        $this->dispatch('chartsUpdated');
     }
     
     public function updatedEndDate()
     {
         $this->dateRange = 'custom';
         $this->calculateStats();
+        $this->dispatch('chartsUpdated');
     }
     
     /**
@@ -127,6 +130,9 @@ class SalesDashboard extends Component
         
         // Get daily sales for line chart
         $this->getDailySales();
+        
+        // Dispatch an event after all data is calculated to update charts
+        $this->dispatch('chartsUpdated');
     }
     
     /**

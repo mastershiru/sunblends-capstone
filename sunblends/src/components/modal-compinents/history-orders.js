@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useNavbar } from "../../context/NavbarContext";
+import TokenManager from "../../utils/tokenManager";
 import {
   faXmark,
   faSpinner,
@@ -38,20 +40,29 @@ const OrderDetails = ({
   const fetchOrderDetails = async (orderId) => {
     setIsLoading(true);
     setError(null);
-
+  
     try {
-      // Use provided order data if available
-
+      // Get token from TokenManager
+      const token = TokenManager.getToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+  
+      // Fetch order details
       const orderResponse = await axios.get(
-        `http://127.0.0.1:8000/api/orders/${orderId}`
+        `http://127.0.0.1:8000/api/orders/${orderId}`,
+        { headers }
       );
+      
       setOrderDetails(orderResponse.data);
-
+  
       // Get order items
       const cartResponse = await axios.get(
-        `http://127.0.0.1:8000/api/orders/${orderId}/items`
+        `http://127.0.0.1:8000/api/orders/${orderId}/items`,
+        { headers }
       );
-
+  
       if (cartResponse.data && cartResponse.data.success) {
         setCartItems(cartResponse.data.items || []);
       } else {
@@ -427,6 +438,8 @@ const OrderDetails = ({
 
 // Main Orders Component
 const Orders = ({ isOpenOrders, toggleModalOrders }) => {
+  const { userData, isLoggedIn } = useNavbar();
+  
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -434,48 +447,53 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Fetch orders when modal opens
+  // Update the orders fetching logic
   useEffect(() => {
-    if (isOpenOrders) {
+    if (isOpenOrders && isLoggedIn && userData) {
       fetchOrders();
     }
-  }, [isOpenOrders]);
+  }, [isOpenOrders, isLoggedIn, userData]);
 
-  // Listen for external events requesting to view a specific order
   useEffect(() => {
     const handleViewOrderEvent = (event) => {
-      const orderId = event.detail?.orderId;
-      if (orderId) {
-        console.log("Received viewOrder event for orderId:", orderId);
-        highlightOrder(orderId);
+      if (event.detail?.orderId) {
+        highlightOrder(event.detail.orderId);
       }
     };
-
+    
+    // Add event listener
     document.addEventListener("viewOrder", handleViewOrderEvent);
+    
+    // Clean up event listener on unmount
     return () => {
       document.removeEventListener("viewOrder", handleViewOrderEvent);
     };
   }, [orders]);
 
+  // Update the fetchOrders function:
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Get user data from localStorage
-      const userData = JSON.parse(localStorage.getItem("userData"));
-
+      // Get user ID from userData in context
       if (!userData || !userData.customer_id) {
         throw new Error("User data not found");
       }
 
+      const token = TokenManager.getToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      };
+
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/orders/customer/${userData.customer_id}`
+        `http://127.0.0.1:8000/api/orders/customer/${userData.customer_id}`,
+        { headers }
       );
 
       if (response.data && response.data.success) {
         setOrders(response.data.orders);
-        console.log("Fetched orders:", response.data.orders);
       } else {
         throw new Error("Failed to fetch orders");
       }
@@ -507,7 +525,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
           orderElement.classList.remove("highlight-order");
         }, 2000);
       }
-
+  
       // Find the order data and open details
       const order = orders.find((o) => o.order_id == orderId);
       if (order) {
@@ -515,7 +533,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       }
     }, 300);
   };
-
+  
   // Get color based on order status
   const getStatusColor = (status) => {
     if (!status) return "#6c757d";

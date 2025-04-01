@@ -15,6 +15,8 @@ use App\Http\Controllers\CartApiController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\GoogleLoginController;
+use App\Http\Controllers\reservationController;
+use App\Http\Controllers\AuthController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -32,6 +34,20 @@ Route::get('/menu-items/{id}', [MenuApiController::class, 'show']);
 Route::get('/test/login', [LoginController::class, 'show']);
 
 Route::post('auth/google/callback', [GoogleLoginController::class, 'googleLogin']);
+
+Route::post('/reservation/create', [reservationController::class, 'create']);
+
+Route::post('/refresh-session', [AuthController::class, 'refreshSession']);
+
+// Public token validation endpoint (doesn't require authentication middleware)
+Route::post('/check-token', [AuthController::class, 'checkToken']);
+
+Route::post('/check-token-type', [AuthController::class, 'checkTokenType']);
+
+// Add the original protected route for compatibility
+Route::middleware('auth:sanctum')->get('/validate-token', [AuthController::class, 'validateToken']);
+
+Route::middleware('auth:sanctum')->get('/validate-token', [AuthController::class, 'validateToken']);
 
 //notification
 Route::get('/notifications', [NotificationController::class, 'index']);

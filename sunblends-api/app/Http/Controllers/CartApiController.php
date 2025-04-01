@@ -7,6 +7,8 @@ use App\Models\Customer;
 use App\Models\Cart;
 use App\Models\Dish;
 use App\Models\Order;
+use App\Models\Reservation;
+use App\Models\Transaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -143,6 +145,7 @@ class CartApiController extends Controller
 
         $cartItems = Cart::with('dishes')
             ->where('customer_id', $customer->customer_id)
+            ->whereNull('order_id') // Only get items that aren't part of an order
             ->get();
 
         $formattedCartItems = $cartItems->map(function ($item) {
@@ -234,7 +237,7 @@ class CartApiController extends Controller
             ], 404);
         }
 
-        $cartItem->delete();
+        $cartItem->forceDelete();
 
         return response()->json([
             'success' => true,
@@ -277,6 +280,7 @@ class CartApiController extends Controller
 
         $cartItems = Cart::with('dishes')
             ->where('customer_id', $customer->customer_id)
+            ->whereNull('order_id')
             ->get();
 
         if ($cartItems->isEmpty()) {
@@ -304,25 +308,53 @@ class CartApiController extends Controller
 
         // Create order
         $order = Order::create($orderData);
-
+        
         // Link cart items to the order
         Cart::where('customer_id', $customer->customer_id)
+            ->whereNull('order_id')
             ->update(['order_id' => $order->order_id]);
 
-        // Clear cart
-        Cart::where('customer_id', $customer->customer_id)->delete();
+        // Record transaction in the same request
+        try {
+            // Generate a unique transaction reference
+            $transactionReference = 'TRX-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT) . date('ymd');
+            
+            // Create transaction record with fields that match your model's fillable array
+            Transaction::create([
+                'transaction_reference' => $transactionReference,
+                'order_id' => $order->order_id,
+                'customer_id' => $customer->customer_id,
+                'transaction_status' => 'completed',
+                'transaction_date' => now(), 
+                'cash_amount' => $order->total_price ? $request->totalAmount : 0,
+                'change_amount' => 0, 
+            ]);
+            
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to record transaction', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'order_id' => $order->order_id
+            ]);
+            
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Order placed successfully',
-            'Order_ID' => $order->order_id
+            'Order_ID' => $order->order_id,
+            'transaction_reference' => $transactionReference ?? null
         ]);
     }
+
+
+
     public function getCartCount($customer_id)
     {
         $cartCount = Cart::where('customer_id', $customer_id)
             ->whereNull('order_id')
-            ->sum('quantity'); // ✅ Sum instead of count
+            ->sum('quantity'); 
 
         return response()->json([
             'success' => true,

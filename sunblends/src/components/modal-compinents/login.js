@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import "../../assets/css/modal.css";
 import axios from "axios";
 import Forgotpassword from "./forgot.password";
+import TokenManager from '../../utils/tokenManager'; // Import the token manager
 
 function Login({
   isOpenLogin,
@@ -27,7 +28,7 @@ function Login({
     toggleModalLogin(false);
   };
 
-  // Updated login function that works with the Laravel controller
+  // Updated login function with secure token storage
   function handleSubmit(event) {
     event.preventDefault();
 
@@ -41,9 +42,14 @@ function Login({
         if (res.data.success) {
           alert(res.data.message);
 
-          // Store token and user information
-          localStorage.setItem("email", email);
-          localStorage.setItem("token", res.data.token);
+          // Store token securely with TokenManager
+          if (res.data.token) {
+            TokenManager.setToken(res.data.token, res.data.user);
+            
+            // Set minimal session indicator in sessionStorage
+            sessionStorage.setItem('user_id', res.data.user.customer_id);
+            sessionStorage.setItem('is_authenticated', 'true');
+          }
 
           // Handle different user types
           if (res.data.message.includes("Customer")) {
@@ -74,7 +80,7 @@ function Login({
       });
   }
 
-  // Updated Google login function
+  // Updated Google login function with secure token storage
   const handleGoogleLogin = (credentialResponse) => {
     const credentialResponseDecoded = jwtDecode(credentialResponse.credential);
     const { name, email, picture } = credentialResponseDecoded;
@@ -83,22 +89,33 @@ function Login({
       .post(
         "http://127.0.0.1:8000/api/auth/google/callback",
         {
-          customer_name: name, // ✅ Match backend
-          customer_email: email, // ✅ Match backend
-          customer_picture: picture, // ✅ Match backend
-          Customer_Number: "N/A", // ✅ Provide a default value
+          customer_name: name,
+          customer_email: email,
+          customer_picture: picture,
+          Customer_Number: "N/A",
         },
         { withCredentials: true }
       )
       .then((response) => {
         alert("Logged in with Google successfully.");
+        
+        // Store token securely with TokenManager
+        if (response.data.token) {
+          const userData = {
+            customer_id: response.data.customer_id,
+            customer_name: name,
+            customer_email: email,
+            customer_picture: picture,
+          };
+          
+          TokenManager.setToken(response.data.token, userData);
+          
+          // Set minimal session indicator in sessionStorage
+          sessionStorage.setItem('user_id', response.data.customer_id);
+          sessionStorage.setItem('is_authenticated', 'true');
+        }
+        
         setIsLoggedIn(true);
-
-        console.log("Customer ID:", response.data.customer_id);
-        // Save email and token
-        localStorage.setItem("customer_id", response.data.customer_id);
-        localStorage.setItem("email", email);
-        localStorage.setItem("token", response.data.token);
 
         // Set user data
         setUserData({
@@ -107,6 +124,7 @@ function Login({
           customer_email: email,
           customer_picture: picture,
         });
+        
         toggleModalLogin();
       })
       .catch((err) => {

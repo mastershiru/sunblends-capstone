@@ -311,6 +311,18 @@ const Checkout = ({
                     required
                   />
                 )}
+
+                {deliveryMethod === "pickup" && (
+                  <input
+                    className="notes"
+                    type="time"
+                    placeholder="Select pickup time"
+                    style={{ marginTop: "10px" }}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    required
+                  />
+                )}
               </div>
             </div>
           </div>

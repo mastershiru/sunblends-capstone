@@ -1,62 +1,90 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import SimpleNotification from './simple-notification';
+import { useNavbar } from '../../context/NavbarContext';
+
 
 const NotificationManager = () => {
   const [notifications, setNotifications] = useState([]);
+  const { 
+    setHasNewNotification, 
+    setNotificationBadgeCount,
+    addNotification 
+  } = useNavbar();
   
   // Listen for custom notification events
   useEffect(() => {
-    const handleShowNotification = (event) => {
-      console.log("Notification event received:", event.detail);
-      if (event.detail) {
-        addNotification(event.detail);
+    const handleNewNotification = (event) => {
+      if (event?.detail) {
+        const notification = {
+          id: Date.now(),
+          message: event.detail.message || 'New notification',
+          type: event.detail.type || 'info',
+          duration: event.detail.duration || 5000
+        };
+        
+        addToNotifications(notification);
+        
+        // Update the navbar notification badge
+        setHasNewNotification(true);
+        setNotificationBadgeCount(prev => prev + 1);
+        
+        // Send to NavbarContext if it's an order notification
+        if (event.detail.orderId) {
+          addNotification({
+            id: notification.id,
+            title: 'Order Update',
+            message: event.detail.message,
+            status: event.detail.status,
+            orderId: event.detail.orderId,
+            timestamp: new Date(),
+            read: false
+          });
+        }
       }
     };
     
-    window.addEventListener('showNotification', handleShowNotification);
-    console.log("NotificationManager: Event listener attached");
+    // Add event listener for custom notification event
+    window.addEventListener('show-notification', handleNewNotification);
     
     return () => {
-      window.removeEventListener('showNotification', handleShowNotification);
+      window.removeEventListener('show-notification', handleNewNotification);
     };
-  }, []);
+  }, [setHasNewNotification, setNotificationBadgeCount, addNotification]);
   
-  const addNotification = useCallback((notification) => {
-    console.log("Adding notification:", notification);
-    const id = Date.now();
-    setNotifications(prev => [...prev, { 
-      id, 
-      message: notification.message || 'Notification',
-      type: notification.type || 'info',
-      duration: notification.duration || 5000
-    }]);
+  const addToNotifications = useCallback((notification) => {
+    setNotifications(prev => [...prev, notification]);
     
-    return id;
+    // Auto-remove after duration
+    if (notification.duration !== Infinity) {
+      setTimeout(() => {
+        removeNotification(notification.id);
+      }, notification.duration);
+    }
   }, []);
   
   const removeNotification = useCallback((id) => {
-    console.log("Removing notification:", id);
     setNotifications(prev => prev.filter(notification => notification.id !== id));
   }, []);
   
- 
+  if (notifications.length === 0) {
+    return null;
+  }
   
   return (
-    <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
-      {notifications.map((notification, index) => (
+    <div className="notification-container">
+      {notifications.map(notification => (
         <div 
-          key={notification.id}
-          style={{ 
-            marginBottom: '10px',
-            transform: `translateY(${index * 5}px)`
-          }}
+          key={notification.id} 
+          className={`notification notification-${notification.type}`}
         >
-          <SimpleNotification
-            message={notification.message}
-            type={notification.type}
-            duration={notification.duration}
-            onClose={() => removeNotification(notification.id)}
-          />
+          <div className="notification-content">
+            <p>{notification.message}</p>
+          </div>
+          <button 
+            className="notification-close"
+            onClick={() => removeNotification(notification.id)}
+          >
+            ×
+          </button>
         </div>
       ))}
     </div>
@@ -64,11 +92,17 @@ const NotificationManager = () => {
 };
 
 // Helper function to show notifications from anywhere
-export const showNotification = (message, type = 'info', duration = 5000) => {
-  console.log("showNotification called with:", message, type, duration);
-  window.dispatchEvent(new CustomEvent('showNotification', {
-    detail: { message, type, duration }
-  }));
+export const showNotification = (message, type = 'info', duration = 5000, options = {}) => {
+  const event = new CustomEvent('show-notification', {
+    detail: {
+      message,
+      type,
+      duration,
+      ...options
+    }
+  });
+  
+  window.dispatchEvent(event);
 };
 
 export default NotificationManager;

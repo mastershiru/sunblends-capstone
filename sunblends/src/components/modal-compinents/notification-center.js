@@ -8,19 +8,22 @@ import {
   faCircleInfo,
   faCircleCheck,
 } from "@fortawesome/free-solid-svg-icons";
+import { useNavbar } from "../../context/NavbarContext";
 
-const NotificationsCenter = ({
-  isOpen,
-  onClose,
-  notifications,
-  onMarkAllAsRead,
-  onViewDetails,
-}) => {
-  if (!isOpen) return null;
+const NotificationsCenter = () => {
+  const {
+    isNotificationCenterOpen,
+    toggleNotificationCenter,
+    notifications,
+    clearNotifications,
+    viewOrderDetails
+  } = useNavbar();
+
+  if (!isNotificationCenterOpen) return null;
 
   // Helper to get appropriate icon for status
   const getStatusIcon = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "completed":
         return faCircleCheck;
       case "ready":
@@ -36,7 +39,7 @@ const NotificationsCenter = ({
 
   // Helper to get appropriate color for status
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "completed":
       case "ready":
         return "#10b981"; // green
@@ -93,7 +96,7 @@ const NotificationsCenter = ({
           </h2>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <button
-              onClick={onMarkAllAsRead}
+              onClick={clearNotifications}
               style={{
                 fontSize: "0.875rem",
                 color: "#ff8243",
@@ -112,7 +115,7 @@ const NotificationsCenter = ({
               Mark all as read
             </button>
             <button
-              onClick={onClose}
+              onClick={toggleNotificationCenter}
               style={{
                 background: "none",
                 border: "none",
@@ -136,7 +139,7 @@ const NotificationsCenter = ({
             flexGrow: 1,
           }}
         >
-          {notifications.length === 0 ? (
+          {!notifications || notifications.length === 0 ? (
             <div
               style={{
                 display: "flex",
@@ -157,12 +160,12 @@ const NotificationsCenter = ({
             notifications.map((notification) => (
               <div
                 key={notification.id}
-                onClick={() => onViewDetails(notification.order_id)}
+                onClick={() => viewOrderDetails(notification.order_id)}
                 style={{
                   padding: "1rem",
                   borderBottom: "1px solid #f3f4f6",
                   cursor: "pointer",
-                  backgroundColor: notification.read
+                  backgroundColor: notification.read_at
                     ? "transparent"
                     : "rgba(255, 130, 67, 0.05)",
                   display: "flex",
@@ -172,12 +175,12 @@ const NotificationsCenter = ({
                   margin: "0.25rem 0",
                 }}
                 onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = notification.read
+                  (e.currentTarget.style.backgroundColor = notification.read_at
                     ? "#f9fafb"
                     : "rgba(255, 130, 67, 0.1)")
                 }
                 onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor = notification.read
+                  (e.currentTarget.style.backgroundColor = notification.read_at
                     ? "transparent"
                     : "rgba(255, 130, 67, 0.05)")
                 }
@@ -199,7 +202,7 @@ const NotificationsCenter = ({
                 </div>
                 <div style={{ flexGrow: 1 }}>
                   <div
-                    style={{ fontWeight: notification.read ? "400" : "600" }}
+                    style={{ fontWeight: notification.read_at ? "400" : "600" }}
                   >
                     {notification.message}
                   </div>
@@ -213,7 +216,7 @@ const NotificationsCenter = ({
                     }}
                   >
                     <span>
-                      {new Date(notification.timestamp).toLocaleString([], {
+                      {notification.created_at && new Date(notification.created_at).toLocaleString([], {
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
@@ -249,7 +252,7 @@ const NotificationsCenter = ({
           }}
         >
           <button
-            onClick={onClose}
+            onClick={toggleNotificationCenter}
             style={{
               padding: "0.5rem 2rem",
               backgroundColor: "#ff8243",

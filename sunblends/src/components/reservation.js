@@ -34,7 +34,7 @@ const BookingTable = () => {
     useState(false);
 
   // API URL
-  const API_BASE_URL = "http://172.16.8.48:8000/api";
+  const API_BASE_URL = "http://127.0.0.1:8000/api";
 
   // navigate to other screen like home to All menu, all menu to home----------------------------------------------------------------------------
   const location = useLocation();
@@ -564,7 +564,7 @@ const BookingTable = () => {
       if (isLoggedIn && userData) {
         try {
           const response = await fetch(
-            `http://172.16.8.48:8000/api/cart/${userData.customer_id}/count`
+            `http://127.0.0.1:8000/api/cart/${userData.customer_id}/count`
           );
 
           const data = await response.json();
@@ -591,6 +591,7 @@ const BookingTable = () => {
   const [person, setPerson] = useState("1 Person");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [reservationStatus, setReservationStatus] = useState({ message: "", success: null });
 
   useEffect(() => {
     if (window.location.hash) {
@@ -601,6 +602,83 @@ const BookingTable = () => {
       }
     }
   }, []);
+
+  // Handle reservation submission
+  const handleReservation = async () => {
+    // Reset status message
+    setReservationStatus({ message: "", success: null });
+    
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      toggleModalLogin();
+      return;
+    }
+    
+    // Validate form fields
+    if (!date || !time || !person) {
+      setReservationStatus({
+        message: "Please fill in all reservation details",
+        success: false
+      });
+      return;
+    }
+    
+    // Extract number of people from selection
+    const peopleCount = parseInt(person.split(' ')[0]);
+    
+    try {
+      setIsLoading(true);
+      
+      const response = await axios.post(`${API_BASE_URL}/reservation/create`, {
+        customer_id: userData.customer_id,
+        reservation_date: date,
+        reservation_time: time,
+        reservation_people: peopleCount,
+        order_id: null // Can be linked to an order if needed
+      }, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data.success) {
+        setReservationStatus({
+          message: "Reservation successfully created!",
+          success: true
+        });
+        
+        // Clear form after successful submission
+        setPerson("1 Person");
+        setDate("");
+        setTime("");
+        
+        showNotification("Your reservation has been created successfully", "success", 5000);
+      } else {
+        setReservationStatus({
+          message: response.data.message || "Failed to create reservation",
+          success: false
+        });
+      }
+    } catch (error) {
+      console.error("Reservation error:", error);
+      
+      // Handle validation errors
+      if (error.response && error.response.status === 422) {
+        setReservationStatus({
+          message: error.response.data.message || "Please check your reservation details",
+          success: false
+        });
+      } else {
+        setReservationStatus({
+          message: "An error occurred while creating your reservation",
+          success: false
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -689,6 +767,20 @@ const BookingTable = () => {
             <p className="booking-subtitle">
               Please fill out the form below to make a reservation.
             </p>
+            
+            {reservationStatus.message && (
+              <div className={`alert ${reservationStatus.success ? 'alert-success' : 'alert-danger'}`}
+                   style={{ 
+                     padding: '10px', 
+                     marginBottom: '15px', 
+                     borderRadius: '4px',
+                     backgroundColor: reservationStatus.success ? '#d4edda' : '#f8d7da',
+                     color: reservationStatus.success ? '#155724' : '#721c24'
+                   }}>
+                {reservationStatus.message}
+              </div>
+            )}
+            
             <div className="form-group">
               <label>Person</label>
               <select
@@ -706,6 +798,7 @@ const BookingTable = () => {
               <input
                 type="date"
                 value={date}
+                min={new Date().toISOString().split('T')[0]} // Set minimum date to today
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
@@ -714,10 +807,34 @@ const BookingTable = () => {
               <input
                 type="time"
                 value={time}
-                onChange={(e) => setTime(e.target.value)}
+                min="10:00"
+                max="17:00"
+                onChange={(e) => {
+                  // Validate time is between 10am and 5pm
+                  const selectedTime = e.target.value;
+                  const [hours, minutes] = selectedTime.split(':').map(Number);
+                  
+                  if ((hours > 10 || (hours === 10 && minutes >= 0)) && 
+                      (hours < 17 || (hours === 17 && minutes === 0))) {
+                    setTime(selectedTime);
+                  } else {
+                    alert("Please select a time between 10:00 AM and 5:00 PM");
+                    // Revert to valid time or empty
+                    setTime("");
+                  }
+                }}
               />
+              <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
+                Reservation hours: 10:00 AM - 5:00 PM
+              </small>
             </div>
-            <button className="booking-button">BOOKING TABLE</button>
+            <button 
+              className="booking-button" 
+              onClick={handleReservation}
+              disabled={isLoading}
+            >
+              {isLoading ? "PROCESSING..." : "BOOKING TABLE"}
+            </button>
           </div>
         </div>
       </section>

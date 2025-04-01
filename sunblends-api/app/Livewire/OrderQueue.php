@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Livewire;
 
 use Livewire\Component;
@@ -13,13 +12,27 @@ use App\Events\OrderStatusChanged as OrderStatusEvent;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Log;
 use App\Models\CustomerNotification;
+use App\Models\Transaction;
+use Livewire\WithPagination;
 
 class OrderQueue extends Component
 {
-    public $orders;
+    use WithPagination;
+    
+    // Filter properties
+    public $search = '';
+    public $dateRange = 'today';
+    public $orderType = '';
+    public $orderStatus = '';
+    public $deliveryOption = '';
+    public $startDate;
+    public $endDate;
+    public $perPage = 10;
+    
     public $isDetailModalOpen = false;
     public $customerInfo;
     public $cartItems;
+    
     public $statusDescriptions = [
         'pending' => 'Your order has been received and is awaiting processing.',
         'processing' => 'Our kitchen team is now preparing your order.',
@@ -27,6 +40,87 @@ class OrderQueue extends Component
         'completed' => 'Your order has been completed. Thank you!',
         'cancelled' => 'This order has been cancelled.',
     ];
+
+    // When a property is updated, reset pagination
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+    
+    public function updatingOrderStatus()
+    {
+        $this->resetPage();
+    }
+    
+    public function updatingOrderType()
+    {
+        $this->resetPage();
+    }
+    
+    public function updatingDeliveryOption()
+    {
+        $this->resetPage();
+    }
+    
+
+    public function mount()
+    {
+        // Set default date range
+        $this->setDateRange('today');
+    }
+    
+    /**
+     * Set date range based on selection
+     */
+    public function setDateRange($range)
+    {
+        $this->dateRange = $range;
+        
+        switch ($range) {
+            case 'today':
+                $this->startDate = now()->startOfDay()->format('Y-m-d');
+                $this->endDate = now()->endOfDay()->format('Y-m-d');
+                break;
+            case 'yesterday':
+                $this->startDate = now()->subDay()->startOfDay()->format('Y-m-d');
+                $this->endDate = now()->subDay()->endOfDay()->format('Y-m-d');
+                break;
+            case 'this_week':
+                $this->startDate = now()->startOfWeek()->format('Y-m-d');
+                $this->endDate = now()->endOfWeek()->format('Y-m-d');
+                break;
+            case 'this_month':
+                $this->startDate = now()->startOfMonth()->format('Y-m-d');
+                $this->endDate = now()->endOfMonth()->format('Y-m-d');
+                break;
+            case 'last_month':
+                $this->startDate = now()->subMonth()->startOfMonth()->format('Y-m-d');
+                $this->endDate = now()->subMonth()->endOfMonth()->format('Y-m-d');
+                break;
+            case 'custom':
+                // Keep current dates if already set, otherwise set to last 7 days
+                if (!$this->startDate) {
+                    $this->startDate = now()->subDays(7)->format('Y-m-d');
+                }
+                if (!$this->endDate) {
+                    $this->endDate = now()->format('Y-m-d');
+                }
+                break;
+            default:
+                $this->startDate = now()->startOfDay()->format('Y-m-d');
+                $this->endDate = now()->endOfDay()->format('Y-m-d');
+                break;
+        }
+    }
+    
+    /**
+     * Handle date range change
+     */
+    public function updatedDateRange()
+    {
+        $this->resetPage();
+        $this->setDateRange($this->dateRange);
+    }
 
     public function openDetailModal()
     {
@@ -61,9 +155,6 @@ class OrderQueue extends Component
                 'status_order' => $status
             ]);
             
-            // Reload the orders
-            $this->loadOrders();
-            
             // Create notification payload with rich data
             $notificationData = [
                 'order_id' => $order->order_id,
@@ -85,7 +176,6 @@ class OrderQueue extends Component
             // If this is an online order with a customer
             if ($order->customer_id) {
                 try {
-                    
                     $customerNotification = CustomerNotification::create([
                         'type' => 'order.status_changed',
                         'customer_id' => $order->customer_id,
@@ -143,9 +233,6 @@ class OrderQueue extends Component
     
     /**
      * Get the appropriate notification type based on status
-     * 
-     * @param string $status The order status
-     * @return string Notification type (success, info, warning, error)
      */
     protected function getNotifyType($status)
     {
@@ -168,36 +255,57 @@ class OrderQueue extends Component
     {
         $this->openDetailModal();
         
-        // Get order with customer information
-        $this->customerInfo = Order::with(['customer'])->find($id);
+        $transactionId = Transaction::where('order_id', $id)->value('transaction_id');
         
-        // Get cart items including soft-deleted items
-        $this->cartItems = Cart::withTrashed()
-                               ->where('order_id', $id)
-                               ->with('dishes')
-                               ->get();
+        if (!$transactionId) {
+            session()->flash('error', 'No transaction found for this order.');
+            return;
+        }
+        
+        $this->dispatch('openTransactionModal', transactionId: $transactionId);                      
     }
 
-    public function mount()
+    /**
+     * Get filtered orders query
+     */
+    public function getOrdersProperty()
     {
-        $this->loadOrders();
-    }
-
-    public function loadOrders()
-    {
-        // Get all orders ordered by creation date (newest first)
-        $this->orders = Order::with(['customer', 'cart' => function($query) {
+        return Order::query()
+            ->with(['customer', 'cart' => function($query) {
                 // Include soft deleted items in count
                 $query->withTrashed();
             }])
+            ->when($this->search, function ($query, $search) {
+                // Search in order fields and related customer
+                return $query->where(function($q) use ($search) {
+                    $q->where('order_id', 'like', "%{$search}%")
+                      ->orWhere('guest_name', 'like', "%{$search}%")
+                      ->orWhere('total_price', 'like', "%{$search}%")
+                      ->orWhereHas('customer', function($customerQuery) use ($search) {
+                          $customerQuery->where('customer_name', 'like', "%{$search}%");
+                      });
+                });
+            })
+            ->when($this->orderStatus, function ($query, $status) {
+                return $query->where('status_order', $status);
+            })
+            ->when($this->orderType, function ($query, $type) {
+                return $query->where('type_order', $type);
+            })
+            ->when($this->deliveryOption, function ($query, $option) {
+                return $query->where('delivery_option', $option);
+            })
+            ->when($this->startDate && $this->endDate, function ($query) {
+                return $query->whereBetween('created_at', [$this->startDate . ' 00:00:00', $this->endDate . ' 23:59:59']);
+            })
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($this->perPage);
     }
 
     public function render()
     {
         return view('livewire.order-queue', [
-            'orders' => $this->orders,
+            'filteredOrders' => $this->orders,
             'customerInfo' => $this->customerInfo,
             'cartItems' => $this->cartItems,
         ]);

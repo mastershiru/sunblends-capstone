@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import Coffee from "../assets/images/coffee.jpg";
-import Logo from "../assets/images/logo.png";
+import Coffee from "../assets/images/coffee.gif";
 import Login from "./modal-compinents/login";
 import About from "./about";
 import TblReservation from "./table-reservation";
@@ -10,16 +9,18 @@ import Menu from "./menu";
 import Promo from "./promo";
 import Footer from "./footer";
 import ScroolBacktoTop from "./back.to.Top.btn";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faMagnifyingGlass,
-  faCartShopping,
-  faCircleUser,
-  faBars,
-  faPen,
-} from "@fortawesome/free-solid-svg-icons";
-import Orders from "./modal-compinents/history-orders";
+import Pusher from "pusher-js";
+import Echo from "laravel-echo";
+import NotificationModal from "./modal-compinents/notification-modal";
+import NotificationsCenter from "./modal-compinents/notification-center";
+import NotificationManager, {
+  showNotification,
+} from "./notifications/Notification-manager";
 import EditProfile from "./modal-compinents/edit-profile";
+import Orders from "./modal-compinents/history-orders";
+import axios from "axios";
+import Navbar from "./Navbar";
+import { useLocation } from "react-router-dom";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -28,6 +29,29 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [userData, setUserData] = useState(null);
+  const location = useLocation();
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalData, setStatusModalData] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasNewNotification, setHasNewNotification] = useState(false);
+  const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] =
+    useState(false);
+
+  // API URL
+  const API_BASE_URL = "http://127.0.0.1:8000/api";
+
+  // navigate to other screen like home to All menu, all menu to home----------------------------------------------------------------------------
+  useEffect(() => {
+    if (location.hash) {
+      const sectionId = location.hash.substring(1);
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [location]);
 
   //navbar menu
   const [isOpen, setIsOpen] = useState(false);
@@ -36,30 +60,441 @@ export default function Home() {
     setIsOpen((prevState) => !prevState);
   };
 
-  // Check if the user is already logged in when the component mounts
+  const toggleNotificationCenter = () => {
+    setIsNotificationCenterOpen(!isNotificationCenterOpen);
+    // Close dropdown when opening notification center
+    if (!isNotificationCenterOpen) {
+      setIsDropdownOpen(false);
+    }
+
+    // If opening notification center and there are unread notifications,
+    // mark them as seen (not read yet)
+    if (!isNotificationCenterOpen && hasNewNotification) {
+      // This would be a good place to visually acknowledge notifications
+      // without marking them as read in the database yet
+      console.log("Notification center opened with unread notifications");
+    }
+  };
+
+  // Fetch notifications when user logs in
+  useEffect(() => {
+    if (isLoggedIn && userData?.customer_id) {
+      fetchNotifications();
+
+      // Set up polling to refresh notifications every 30 seconds
+      const intervalId = setInterval(() => {
+        fetchNotifications(true); // silent refresh
+      }, 30000);
+
+      return () => clearInterval(intervalId);
+    } else {
+      // Clear notifications when logged out
+      setNotifications([]);
+      setNotificationBadgeCount(0);
+      setHasNewNotification(false);
+    }
+  }, [isLoggedIn, userData]);
+
+  // Function to fetch notifications from the server
+  const fetchNotifications = async (silent = false) => {
+    if (!userData?.customer_id) return;
+
+    if (!silent) setIsLoading(true);
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/notifications?customer_id=${userData.customer_id}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Process notifications
+        const notificationsData = response.data.notifications || [];
+
+        // Map to consistent format
+        const formattedNotifications = notificationsData.map(
+          (notification) => ({
+            id: notification.id,
+            message:
+              notification.message ||
+              `Order #${notification.order_id} status update`,
+            order_id: notification.order_id,
+            status: notification.status || "info",
+            timestamp: notification.timestamp || notification.created_at,
+            read: notification.read || false,
+            data: notification.data || {},
+          })
+        );
+
+        setNotifications(formattedNotifications);
+
+        // Count unread notifications
+        const unreadCount = formattedNotifications.filter(
+          (n) => !n.read
+        ).length;
+        setNotificationBadgeCount(unreadCount);
+        setHasNewNotification(unreadCount > 0);
+      } else {
+        console.error("Error in notification response:", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
+  };
+
+  // Function to mark a notification as read
+  const markNotificationAsRead = async (id) => {
+    if (!userData?.customer_id || !id) return;
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/notifications/${id}/read`,
+        { customer_id: userData.customer_id },
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update local state to mark as read
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+        );
+
+        // Recalculate badge count
+        const updatedNotifications = notifications.map((n) =>
+          n.id === id ? { ...n, read: true } : n
+        );
+        const updatedUnreadCount = updatedNotifications.filter(
+          (n) => !n.read
+        ).length;
+
+        setNotificationBadgeCount(updatedUnreadCount);
+        setHasNewNotification(updatedUnreadCount > 0);
+
+        // Return the notification that was marked as read
+        return notifications.find((n) => n.id === id);
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+    return null;
+  };
+
+  // Function to view a notification's details and mark it as read
+  const viewNotificationDetails = async (id) => {
+    const notification = await markNotificationAsRead(id);
+    if (notification && notification.order_id) {
+      viewOrderDetails(notification.order_id);
+    }
+  };
+
+  // Function to mark all notifications as read
+  const clearNotifications = async () => {
+    if (!userData?.customer_id) return;
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/notifications/mark-all-read`,
+        { customer_id: userData.customer_id },
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update local state to mark all as read
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        setNotificationBadgeCount(0);
+        setHasNewNotification(false);
+      }
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  // Initialize Echo once component mounts
+  useEffect(() => {
+    // Clean up existing connections
+    if (window.Echo) {
+      try {
+        window.Echo.disconnect();
+      } catch (e) {
+        console.error("Error disconnecting Echo:", e);
+      }
+    }
+
+    try {
+      // First initialize Pusher
+      window.Pusher = Pusher;
+
+      // Check Pusher is available
+      if (!window.Pusher) {
+        throw new Error("Pusher not available");
+      }
+
+      // Get token for authenticated channels (if available)
+      const token = localStorage.getItem("token");
+
+      // Initialize Echo
+      window.Echo = new Echo({
+        broadcaster: "pusher",
+        key: "sunblends-key",
+        wsHost: "localhost",
+        wsPort: 8080,
+        disableStats: true,
+        forceTLS: false,
+        encrypted: false,
+        enabledTransports: ["ws", "wss"],
+        auth: token
+          ? {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+              },
+            }
+          : undefined,
+      });
+
+      console.log("Echo initialized successfully");
+
+      // Set up channel listeners
+      const publicChannel = window.Echo.channel("orders");
+
+      publicChannel.listen(".OrderStatusChanged", (data) => {
+        console.log("Received OrderStatusChanged event:", data);
+        handleOrderStatusUpdate(data);
+      });
+
+      // Also listen without the dot prefix as a fallback
+      publicChannel.listen("OrderStatusChanged", (data) => {
+        console.log("Received OrderStatusChanged event (no dot):", data);
+        handleOrderStatusUpdate(data);
+      });
+
+      // If logged in, listen on private channel
+      if (isLoggedIn && userData && userData.customer_id) {
+        try {
+          const privateChannel = window.Echo.private(
+            `customer.${userData.customer_id}`
+          );
+
+          privateChannel.listen(".OrderStatusChanged", (data) => {
+            console.log("Received private OrderStatusChanged event:", data);
+            handlePrivateOrderUpdate(data);
+          });
+
+          console.log(
+            `Subscribed to private channel: customer.${userData.customer_id}`
+          );
+        } catch (error) {
+          console.error("Error setting up private channel:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error setting up Echo:", error);
+    }
+
+    // Cleanup function
+    return () => {
+      if (window.Echo) {
+        console.log("Cleaning up Echo connections");
+        try {
+          window.Echo.disconnect();
+        } catch (e) {
+          console.error("Error during cleanup:", e);
+        }
+      }
+    };
+  }, [isLoggedIn, userData]);
+
+  // Handle order status updates from public channel
+  const handleOrderStatusUpdate = (data) => {
+    console.log("Processing order status update:", data);
+
+    // Extract notification data
+    const notificationData = data.orderData || data;
+
+    // Only process if this notification is for the current user
+    if (
+      isLoggedIn &&
+      userData &&
+      notificationData.customer_id === userData.customer_id
+    ) {
+      console.log("Order update is for current user");
+
+      // Show toast notification
+      showNotification(
+        notificationData.message ||
+          `Order #${notificationData.order_id} status updated to ${notificationData.status}`,
+        notificationData.notify_type ||
+          getNotificationType(notificationData.status),
+        5000
+      );
+
+      // Refresh notifications from server
+      fetchNotifications(true); // silent refresh
+
+      // Show modal for important updates
+      if (isImportantStatus(notificationData.status)) {
+        showNotificationModal(notificationData);
+      }
+    }
+  };
+
+  // Handle private notifications (already filtered for this user)
+  const handlePrivateOrderUpdate = (data) => {
+    console.log("Processing private order update:", data);
+
+    // Extract notification data
+    const notificationData = data.orderData || data;
+
+    // Show toast notification
+    showNotification(
+      notificationData.message ||
+        `Order #${notificationData.order_id} status updated to ${notificationData.status}`,
+      notificationData.notify_type ||
+        getNotificationType(notificationData.status),
+      5000
+    );
+
+    // Refresh notifications from server
+    fetchNotifications(true); // silent refresh
+
+    // Show modal for important notifications
+    showNotificationModal(notificationData);
+  };
+
+  // Show notification modal
+  const showNotificationModal = (notificationData) => {
+    setStatusModalData({
+      order_id: notificationData.order_id,
+      status: notificationData.status,
+      message: notificationData.description || notificationData.message,
+      total_price: notificationData.total_price,
+    });
+
+    setStatusModalOpen(true);
+  };
+
+  // Get notification type based on status
+  const getNotificationType = (status) => {
+    switch (status) {
+      case "completed":
+      case "ready":
+        return "success";
+      case "processing":
+        return "info";
+      case "cancelled":
+        return "error";
+      default:
+        return "info";
+    }
+  };
+
+  // Check if status is important
+  const isImportantStatus = (status) => {
+    return ["completed", "cancelled", "ready", "processing"].includes(status);
+  };
+
+  // Get appropriate status messages
+  const getStatusMessage = (status) => {
+    switch (status) {
+      case "completed":
+        return {
+          toastMessage: "Your order is completed!",
+          modalMessage:
+            "Great news! Your order has been completed and is ready for pickup/delivery.",
+        };
+      case "processing":
+        return {
+          toastMessage: "Your order is being prepared!",
+          modalMessage: "Our kitchen is now preparing your delicious order.",
+        };
+      case "ready":
+        return {
+          toastMessage: "Your order is ready for pickup!",
+          modalMessage:
+            "Your order is hot and ready! Come and get it while it's fresh.",
+        };
+      case "cancelled":
+        return {
+          toastMessage: "Your order has been cancelled.",
+          modalMessage:
+            "We're sorry, but your order has been cancelled. Please contact us for assistance.",
+        };
+      default:
+        return {
+          toastMessage: `Order status changed to ${status}`,
+          modalMessage: `Your order status has been updated to ${status}.`,
+        };
+    }
+  };
+
+  // View order details from notification
+  const viewOrderDetails = (orderId) => {
+    // Close any open modals
+    setStatusModalOpen(false);
+    setIsNotificationCenterOpen(false);
+
+    // Open orders modal
+    toggleModalOrders();
+
+    // Notify Orders component to highlight the specific order
+    setTimeout(() => {
+      const event = new CustomEvent("viewOrder", { detail: { orderId } });
+      document.dispatchEvent(event);
+    }, 300); // Small delay to ensure Orders component is mounted
+  };
+
+  // Check if user is logged in on page load
   useEffect(() => {
     const storedUserData = localStorage.getItem("userData");
     const storedIsLoggedIn = localStorage.getItem("isLoggedIn");
 
-    if (storedIsLoggedIn === "true") {
-      setIsLoggedIn(true);
-      setUserData(JSON.parse(storedUserData));
+    if (storedIsLoggedIn === "true" && storedUserData) {
+      try {
+        const parsed = JSON.parse(storedUserData);
+        setIsLoggedIn(true);
+        setUserData(parsed);
+      } catch (e) {
+        console.error("Error parsing stored user data:", e);
+        localStorage.removeItem("userData");
+        localStorage.removeItem("isLoggedIn");
+      }
     }
   }, []);
 
-  // Store user data and login state to localStorage on login
+  // Save user data to localStorage when logged in
   useEffect(() => {
     if (isLoggedIn && userData) {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userData", JSON.stringify(userData));
+    } else if (!isLoggedIn) {
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("userData");
     }
   }, [isLoggedIn, userData]);
 
-  //dropdown
+  // Toggle dropdown menu
   const toggleDropdown = () => {
     setIsDropdownOpen((prev) => !prev);
   };
-  //click outside ng dropdown mag cclose
+
+  // Close dropdown when clicking outside
   const handleClickOutside = (event) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
       setIsDropdownOpen(false);
@@ -73,20 +508,22 @@ export default function Home() {
     };
   }, []);
 
-  //Login
+  // Login modal
   const [isOpenLogin, setIsOpenLogin] = useState(false);
   const toggleModalLogin = () => {
     setIsOpenLogin(!isOpenLogin);
   };
-  //Register
+
+  // Register modal
   const [isOpenRegister, setIsOpenRegister] = useState(false);
   const toggleModalRegister = () => {
     setIsOpenRegister(!isOpenRegister);
   };
-  //Edit Profile
+
+  // Edit profile modal
   const [isOpenEditProfile, setIsOpenEditProfile] = useState(false);
 
-  //Cart
+  // Cart functionality
   const [cartNumber, setCartNumber] = useState(0);
   const [isOpenCart, setIsOpenCart] = useState(false);
   const toggleModalCart = () => {
@@ -96,6 +533,7 @@ export default function Home() {
       setIsOpenCart(!isOpenCart);
     }
   };
+
   const addToCartNumber = () => {
     setCartNumber((prev) => prev + 1);
   };
@@ -104,28 +542,28 @@ export default function Home() {
 
   const addToCart = (dish) => {
     setCartItems((prev) => {
-      // Check if the dish already exists in the cart
+      // Check if dish already exists in cart
       const existingItem = prev.find((item) => item.title === dish.title);
 
       if (existingItem) {
-        // If it exists, increase the quantity
+        // If it exists, increase quantity
         return prev.map((item) =>
           item.title === dish.title
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
-        // If it doesn't exist, add the dish with a quantity of 1
+        // If it doesn't exist, add with quantity 1
         return [...prev, { ...dish, quantity: 1 }];
       }
     });
   };
 
-  //checkout
+  // Checkout modal
   const [isOpenCheckout, setIsOpenCheckout] = useState(false);
   const toggleModalCheckout = (state) => setIsOpenCheckout(state);
 
-  //Orders
+  // Orders history modal
   const [isOpenOrders, setIsOpenOrders] = useState(false);
   const toggleModalOrders = () => {
     setIsOpenOrders(!isOpenOrders);
@@ -139,304 +577,89 @@ export default function Home() {
       setEmail("");
       setPassword("");
       setUserData(null);
+      setCartItems([]); // Clear cart items
       localStorage.removeItem("isLoggedIn");
       localStorage.removeItem("userData");
       alert("You have been logged out.");
       toggleModalLogin(true);
+      setCartNumber(0);
     }
   };
+
+  // Add this effect to fetch cart data when user logs in
+  useEffect(() => {
+    const fetchCartData = async () => {
+      if (isLoggedIn && userData) {
+        try {
+          const response = await fetch(
+            `http://127.0.0.1:8000/api/cart/${userData.customer_id}/count`
+          );
+
+          const data = await response.json();
+          // console.log("Cart API Response:", data); // Debugging step
+
+          if (data.success) {
+            setCartNumber(Number(data.cart_count)); // Ensure correct update
+          } else {
+            console.error("Cart API error:", data);
+            setCartNumber(0);
+          }
+        } catch (error) {
+          console.error("Error fetching cart:", error);
+          setCartNumber(0);
+        }
+      } else {
+        setCartNumber(0);
+      }
+    };
+
+    fetchCartData();
+  }, [isLoggedIn, userData]);
 
   return (
     <>
       <ScroolBacktoTop />
-      <nav className="scale-in-ver-top">
-        <a href="#home">
-          <img className="logo" src={Logo} alt="Sunblends Logo" />
-        </a>
+      <NotificationManager />
 
-        <div style={{ display: "flex" }}>
-          <ul id="navbar">
-            <li>
-              <a href="#menu">Menu</a>
-            </li>
-            <li>
-              <a href="#about">About</a>
-            </li>
-            <li>
-              <a href="#contact">Contact</a>
-            </li>
+      <NotificationModal
+        isOpen={statusModalOpen}
+        onClose={() => setStatusModalOpen(false)}
+        data={statusModalData}
+        onViewOrder={viewOrderDetails}
+      />
 
-            <li className="for-mobile">
-              <button style={{ display: "none" }} id="mobile-account-button">
-                Account
-              </button>
-            </li>
-            <li className="for-mobile">
-              <button id="mobile-show-login">Login</button>
-            </li>
+      {/* Notifications center modal */}
+      <NotificationsCenter
+        isOpen={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+        notifications={notifications}
+        onMarkAllAsRead={clearNotifications}
+        onViewDetails={(orderId) => {
+          setIsNotificationCenterOpen(false);
+          viewOrderDetails(orderId);
+        }}
+      />
 
-            <form action="#" className="header-search-form for-des">
-              <input
-                type="search"
-                className="form-input"
-                placeholder="Search Here..."
-              />
-              <button type="submit" style={{ color: "black" }}>
-                <i>
-                  <FontAwesomeIcon icon={faMagnifyingGlass} />
-                </i>
-              </button>
-            </form>
-
-            <button
-              className="header-btn header-cart"
-              id="show-cart"
-              onClick={toggleModalCart}
-              style={{ border: "none", color: "#6E6E6E" }}
-            >
-              <i>
-                <FontAwesomeIcon icon={faCartShopping} />
-              </i>
-              <span className="cart-number">{cartNumber}</span>
-            </button>
-          </ul>
-
-          <div ref={dropdownRef} id="user" onClick={toggleDropdown}>
-            <i className="header-btn" style={{ boxShadow: "none" }}>
-              {isLoggedIn && userData && userData.Customer_Img ? (
-                <img
-                src={
-                  userData?.Customer_Img
-                    ? userData.Customer_Img.startsWith("http")
-                      ? userData.Customer_Img // Use external Google profile image
-                      : `http://127.0.0.1:8000/storage/${userData.Customer_Img}` // Local image from Laravel
-                    : "/default-profile.png" // Fallback image if empty
-                }
-
-                  alt="Profile"
-                  className="profile-img"
-                  style={{
-                    width: "50px",
-                    height: "40px",
-                    borderRadius: "50%",
-                  }}
-                />
-              ) : (
-                <FontAwesomeIcon
-                  icon={faCircleUser}
-                  style={{ height: "38px", color: "#6E6E6E" }}
-                />
-              )}
-            </i>
-
-            {isDropdownOpen && (
-              <div
-                className={`dropdown-content ${
-                  isDropdownOpen ? "dropdown-open" : ""
-                }`}
-              >
-                {isLoggedIn ? (
-                  <>
-                    <div
-                      className="profile "
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      {userData && userData.Customer_Img ? (
-                        <img
-                          // src={`http://localhost:8081/${userData.Customer_Img}`}
-                          src={
-                            userData?.Customer_Img
-                              ? userData.Customer_Img.startsWith("http")
-                                ? userData.Customer_Img // Use external Google profile image
-                                : `http://127.0.0.1:8000/storage/${userData.Customer_Img}` // Local image from Laravel
-                              : "/default-profile.png" // Fallback image if empty
-                          }
-                          alt="Profile"
-                          className="profile-img "
-                          style={{
-                            height: "50px",
-                            width: "50px",
-                            borderRadius: "50%",
-                          }}
-                        />
-                      ) : (
-                        // <span className="cart-number">{cartNumber}</span>
-                        <FontAwesomeIcon
-                          icon={faCircleUser}
-                          style={{
-                            height: "50px",
-                            width: "50px",
-                            borderRadius: "50%",
-                            color: "#6E6E6E",
-                          }}
-                        />
-                      )}
-                      <FontAwesomeIcon
-                        icon={faPen} // FontAwesome pencil icon
-                        className="pen-icon"
-                        onClick={() => setIsOpenEditProfile(true)} // Example onClick action
-                      />
-                    </div>
-                    <p
-                      className="user-name"
-                      style={{
-                        fontSize: "10px",
-                        margin: "0",
-                        textAlign: "center",
-                        color: "#AAAAAA",
-                      }}
-                    >
-                      {/* customer_name database */}
-                      {userData ? userData.Customer_Name : "Loading..."}
-                    </p>{" "}
-                    <button onClick={toggleModalOrders}>Orders</button>
-                    <button id="logout-button" onClick={handleLogout}>
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button id="show-login" onClick={toggleModalLogin}>
-                      Login
-                    </button>
-                    <button id="show-register" onClick={toggleModalRegister}>
-                      Register
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div id="mobile">
-            {/* <button className="bar-icon">
-              <FontAwesomeIcon icon={faEllipsisVertical} />
-              <FontAwesomeIcon className="icon" icon={faBars} />
-            </button> */}
-            <button
-              className="navbar-toggler bar-icon"
-              onClick={toggleNavbar}
-              aria-controls="navbarContent"
-              aria-expanded={isOpen}
-              aria-label="Toggle navigation"
-            >
-              <span className="navbar-toggler-icon">
-                <FontAwesomeIcon className="icon" icon={faBars} />
-              </span>
-            </button>
-          </div>
-        </div>
-        {/* //menu navbar  */}
-        <div
-          className={`navbar-collapse collapse ${isOpen ? "show" : ""}`}
-          id="navbarContent"
-        >
-          <ul className="navbar-nav ml-lg-4 pt-3 pt-lg-0">
-            <div className="row" style={{ textAlign: "center" }}>
-              <div className="col-auto" style={{ padding: "0" }}>
-                <i style={{ boxShadow: "none" }}>
-                  {isLoggedIn && userData && userData.Customer_Img ? (
-                    <img
-                    src={
-                      userData?.Customer_Img
-                        ? userData.Customer_Img.startsWith("http")
-                          ? userData.Customer_Img // Use external Google profile image
-                          : `http://127.0.0.1:8000/storage/${userData.Customer_Img}` // Local image from Laravel
-                        : "/default-profile.png" // Fallback image if empty
-                    }
-                      alt="Profile"
-                      className="profile-img"
-                      style={{
-                        width: "50px",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  ) : (
-                    <FontAwesomeIcon
-                      icon={faCircleUser}
-                      style={{ height: "38px", color: "#6E6E6E" }}
-                    />
-                  )}
-                </i>
-              </div>
-              <div className="col-auto" style={{
-                    textAlign: "center",
-                    marginTop: "10px",
-                  }}>
-                <span
-                  className="user-name"
-                  style={{
-                    fontSize: "20px",
-                    color: "#AAAAAA",
-                  }}
-                >
-                  {/* customer_name database */}
-                  {userData ? userData.Customer_Name : "Loading..."}
-                </span>{" "}
-                {/* <br />
-                <span style={{ margin: "0", padding: "0", fontSize: "13px" }}>
-                {userData ? userData.Customer_Email : "Loading..."}
-                </span> */}
-              </div>
-              <div
-                className="col"
-                style={{ fontSize: "30px", textAlign: "right" }}
-              >
-
-                <button
-                className=""
-              id="show-cart"
-              onClick={toggleModalCart}
-              style={{ border: "none", color: "#6E6E6E", background: "transparent", textAlign: "right"}}
-            >
-              <i>
-                <FontAwesomeIcon icon={faCartShopping} />
-              </i>
-              <span
-          style={{
-            position: "absolute",
-            top: "100px",
-            right: "55px",
-            width: "22px",
-            height: "22px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            borderRadius: "50%",
-            fontSize: "12px",
-            color: "#ff8243",
-            textAlign: "center",
-            fontWeight: "bold",
-          }}
-        >
-          {cartNumber}
-        </span>
-            </button>
-              </div>
-            </div>
-            <li className="nav-link">
-              <a href="#menu">Menu</a>
-            </li>
-            <li className="nav-link">
-              <a href="#about">About</a>
-            </li>
-            <li className="nav-link">
-              <a href="#contact">Contact</a>
-            </li>
-            <button 
-      id="auth-button" 
-      onClick={isLoggedIn ? handleLogout : toggleModalLogin}
-    >
-      {isLoggedIn ? "Logout" : "Login"}
-    </button>
-          </ul>
-        </div>
-      </nav>
-
+      <Navbar
+        isLoggedIn={isLoggedIn}
+        userData={userData}
+        cartNumber={cartNumber}
+        isDropdownOpen={isDropdownOpen}
+        dropdownRef={dropdownRef}
+        isOpen={isOpen}
+        toggleDropdown={toggleDropdown}
+        toggleModalCart={toggleModalCart}
+        toggleModalLogin={toggleModalLogin}
+        toggleModalRegister={toggleModalRegister}
+        toggleModalOrders={toggleModalOrders}
+        setIsOpenEditProfile={setIsOpenEditProfile}
+        handleLogout={handleLogout}
+        toggleNavbar={toggleNavbar}
+        toggleNotificationCenter={toggleNotificationCenter}
+        notificationBadgeCount={notificationBadgeCount}
+        hasNewNotification={hasNewNotification}
+        setIsNotificationCenterOpen={setIsNotificationCenterOpen}
+      />
       <Login
         isOpenLogin={isOpenLogin}
         toggleModalLogin={toggleModalLogin}
@@ -451,6 +674,8 @@ export default function Home() {
       <EditProfile
         isOpenEditProfile={isOpenEditProfile}
         setIsOpenEditProfile={setIsOpenEditProfile}
+        userData={userData}
+        setUserData={setUserData}
       />
       <Register
         isOpenRegister={isOpenRegister}
@@ -464,15 +689,15 @@ export default function Home() {
         cartItems={cartItems}
         setCartItems={setCartItems}
         setCartNumber={setCartNumber}
-        isLoggedIn={isLoggedIn} // Pass this prop
-        toggleModalLogin={toggleModalLogin} // Use the actual function
-        toggleModalCheckout={toggleModalCheckout} // Pass down the function
+        isLoggedIn={isLoggedIn}
+        toggleModalLogin={toggleModalLogin}
+        toggleModalCheckout={toggleModalCheckout}
+        isOpenCheckout={isOpenCheckout}
       />
       <Orders
         isOpenOrders={isOpenOrders}
         toggleModalOrders={toggleModalOrders}
       />
-
       <section className="main-banner" id="home">
         <div className="sec-wp">
           <div className="container">
@@ -480,7 +705,7 @@ export default function Home() {
               <div className="col-lg-6">
                 <div className="banner-text">
                   <h1 className="h1-title">
-                    SHE LOVED <span>TEA,</span> I AM COFFEE. WE BLEND.
+                    SHE LOVED TEA, I AM COFFEE. <span>WE BLEND.</span>
                   </h1>
                   <p className="tagline">
                     We offer a wonderful range of uniquely delectable food and
@@ -509,7 +734,6 @@ export default function Home() {
       </section>
       <Menu addToCartNumber={addToCartNumber} addToCart={addToCart} />
       <Promo />
-
       <About />
       <TblReservation />
       <Footer />

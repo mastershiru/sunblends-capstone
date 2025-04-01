@@ -1,3 +1,4 @@
+// src/components/Navbar.js
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -8,27 +9,29 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Logo from "../assets/images/logo.png";
 import { Link } from "react-router-dom";
+import { useNavbar } from "../context/NavbarContext";
 
-const Navbar = ({
-  isLoggedIn,
-  userData,
-  cartNumber,
-  isDropdownOpen,
-  dropdownRef,
-  isOpen,
-  toggleModalCart,
-  toggleModalLogin,
-  toggleModalRegister,
-  toggleModalOrders,
-  setIsOpenEditProfile,
-  handleLogout,
-  toggleNavbar,
-  notificationBadgeCount,
-  toggleDropdown,
-  hasNewNotification,
-  toggleNotificationCenter,
-  setIsNotificationCenterOpen,
-}) => {
+const Navbar = () => {
+  const {
+    isLoggedIn,
+    userData,
+    cartNumber,
+    isDropdownOpen,
+    dropdownRef,
+    isOpen,
+    hasNewNotification,
+    notificationBadgeCount,
+    toggleDropdown,
+    toggleNavbar,
+    toggleModalLogin,
+    toggleModalRegister,
+    toggleModalCart,
+    toggleModalOrders,
+    toggleNotificationCenter,
+    handleLogout,
+    setIsOpenEditProfile,
+  } = useNavbar();
+
   return (
     <nav className="scale-in-ver-top">
       <Link to="/#home">
@@ -58,7 +61,7 @@ const Navbar = ({
           <li className="for-mobile">
             <button id="mobile-show-login">Login</button>
           </li>
-          {/* cart icon------------------------------------------------------------------------------------------ */}
+          {/* cart icon */}
           <button
             className="header-btn header-cart"
             id="show-cart"
@@ -220,18 +223,8 @@ const Navbar = ({
                         className="notification-button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleNotificationCenter(); // Open notification center instead
+                          toggleNotificationCenter();
                         }}
-                        // style={{
-                        //   fontSize: "12px",
-                        //   border: "none",
-                        //   background: "none",
-                        //   cursor: "pointer",
-                        //   textAlign: "center",
-                        //   fontWeight: "200",
-                        //   color: "rgb(0, 0, 0)",
-                        //   padding: " 5px",
-                        // }}
                       >
                         Notifications
                       </button>
@@ -271,7 +264,7 @@ const Navbar = ({
           </button>
         </div>
       </div>
-      {/* //menu navbar  */}
+      {/* Mobile navbar */}
       <div
         className={`navbar-collapse collapse ${isOpen ? "show" : ""}`}
         id="navbarContent"

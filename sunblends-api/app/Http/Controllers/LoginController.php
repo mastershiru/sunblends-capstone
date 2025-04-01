@@ -29,10 +29,13 @@ class LoginController extends Controller
 
     try {
         if ($customer && hash('sha256', $request->password) === $customer->customer_password) {
+            // First, delete any existing tokens to prevent accumulation
+            $customer->tokens()->delete();
+            
             // Properly log the user in using Laravel's auth
             Auth::guard('customer')->login($customer, $request->remember ?? false);
             
-            // Create Sanctum token - for API access
+            // Create a single Sanctum token named 'customer-token'
             $token = $customer->createToken('customer-token', ['customer'])->plainTextToken;
             
             // Save in session for compatibility with session-based auth
@@ -41,16 +44,16 @@ class LoginController extends Controller
                 'guard' => 'customer'
             ]);
             
-            // Return response with redirect to a web route, not an API route
+            // Return response with token
             return response()->json([
                 'success' => true,
                 'message' => 'Customer login successful!',
                 'token' => $token,
-                'redirect' => '/dish',  // Change to web route path only
+                'redirect' => '/dish',
                 'user' => $customer
             ])->withCookie(cookie('laravel_session', Session::getId(), 120));
         }
-
+        
         if ($employee && hash('sha256', $request->password) === $employee->employee_password) {
             // Properly log the user in using Laravel's auth
             Auth::guard('employee')->login($employee, $request->remember ?? false);
