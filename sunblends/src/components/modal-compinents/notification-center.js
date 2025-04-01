@@ -52,6 +52,38 @@ const NotificationsCenter = () => {
     }
   };
 
+  const formatNotificationDate = (notification) => {
+    try {
+      // Try to find a valid date field
+      const dateString = notification.timestamp || notification.created_at;
+      
+      if (!dateString) {
+        return 'Unknown date';
+      }
+      
+      // Try to parse the date string
+      const date = new Date(dateString);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateString);
+        return 'Invalid date';
+      }
+      
+      // Format the date using Intl.DateTimeFormat for better localization
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Date error';
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
@@ -216,12 +248,7 @@ const NotificationsCenter = () => {
                     }}
                   >
                     <span>
-                      {notification.created_at && new Date(notification.created_at).toLocaleString([], {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    {formatNotificationDate(notification)}
                     </span>
                     <span
                       style={{
