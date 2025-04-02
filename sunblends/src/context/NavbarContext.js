@@ -214,9 +214,9 @@ export const NavbarProvider = ({ children }) => {
     try {
       console.log("Setting up WebSocket connection...");
       
-      window.Pusher = Pusher;
+      
       window.Echo = new Echo({
-        broadcaster: "pusher",
+        broadcaster: "reverb",
         key: "sunblends-key",
         cluster: "mt1", // Add this line - using default cluster
         wsHost: window.location.hostname, // Use dynamic hostname instead of hardcoded "localhost"
@@ -225,6 +225,7 @@ export const NavbarProvider = ({ children }) => {
         forceTLS: false, 
         encrypted: false,
         enabledTransports: ["ws", "wss"],
+        authEndpoint: `${API_BASE_URL}/broadcasting/auth`,
         auth: TokenManager.hasToken() ? {
           headers: {
             Authorization: `Bearer ${TokenManager.getToken()}`,

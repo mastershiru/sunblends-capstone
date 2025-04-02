@@ -10,15 +10,23 @@ class BroadcastServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot()
     {
-        Broadcast::routes(['middleware' => ['web']]);
-        
-        // Register public channels explicitly 
-        Broadcast::channel('orders', function () {
-            return true;
-        });
+        Broadcast::routes(['middleware' => ['api', 'auth:sanctum']]);
 
-        require base_path('routes/channels.php');
+        // Add a channel authorization rule for private customer channels
+        Broadcast::channel('customer.{id}', function ($user, $id) {
+            if ($user->tokenCan('customer')) {
+                // For customer tokens, check if the customer_id matches
+                return (int) $user->customer_id === (int) $id;
+            }
+
+            // For admin tokens, allow access to all customer channels
+            if ($user->tokenCan('admin') || $user->tokenCan('employee')) {
+                return true;
+            }
+
+            return false;
+        });
     }
 }

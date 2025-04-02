@@ -41,6 +41,10 @@ Route::post('/reservation/create', [reservationController::class, 'create']);
 
 Route::post('/refresh-session', [AuthController::class, 'refreshSession']);
 
+Route::middleware('auth:sanctum')->post('/broadcasting/auth', function (Request $request) {
+    return Broadcast::auth($request);
+});
+
 // Public token validation endpoint (doesn't require authentication middleware)
 Route::post('/check-token', [AuthController::class, 'checkToken']);
 

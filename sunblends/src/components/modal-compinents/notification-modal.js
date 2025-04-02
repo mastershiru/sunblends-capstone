@@ -892,7 +892,7 @@ const NotificationModal = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes pulse {
           0% { box-shadow: 0 0 0 0 rgba(255, 130, 67, 0.7); }
           70% { box-shadow: 0 0 0 15px rgba(255, 130, 67, 0); }
