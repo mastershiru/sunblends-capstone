@@ -25,6 +25,7 @@ const OrderDetails = ({
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [ratings, setRatings] = useState({});
 
   // Fallback image as base64
   const fallbackImageSrc =
@@ -40,29 +41,29 @@ const OrderDetails = ({
   const fetchOrderDetails = async (orderId) => {
     setIsLoading(true);
     setError(null);
-  
+
     try {
       // Get token from TokenManager
       const token = TokenManager.getToken();
       const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
       };
-  
+
       // Fetch order details
       const orderResponse = await axios.get(
         `http://127.0.0.1:8000/api/orders/${orderId}`,
         { headers }
       );
-      
+
       setOrderDetails(orderResponse.data);
-  
+
       // Get order items
       const cartResponse = await axios.get(
         `http://127.0.0.1:8000/api/orders/${orderId}/items`,
         { headers }
       );
-  
+
       if (cartResponse.data && cartResponse.data.success) {
         setCartItems(cartResponse.data.items || []);
       } else {
@@ -339,6 +340,38 @@ const OrderDetails = ({
                               >
                                 {item.Item_Category || ""}
                               </div>
+                              {orderDetails?.status?.toLowerCase() ===
+                                "completed" && (
+                                <div
+                                  className="rating-container"
+                                  style={{
+                                    borderTop: "1px solid #eee",
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  <div style={{ fontSize: "15px" }}>
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <span
+                                        key={star}
+                                        onClick={() => {
+                                          const newRatings = { ...ratings };
+                                          newRatings[item.Item_ID] = star;
+                                          setRatings(newRatings);
+                                        }}
+                                        style={{
+                                          cursor: "pointer",
+                                          color:
+                                            star <= (ratings[item.Item_ID] || 0)
+                                              ? "#ffd700"
+                                              : "#ccc",
+                                        }}
+                                      >
+                                        ★
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             <div
                               style={{
@@ -439,7 +472,7 @@ const OrderDetails = ({
 // Main Orders Component
 const Orders = ({ isOpenOrders, toggleModalOrders }) => {
   const { userData, isLoggedIn } = useNavbar();
-  
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -460,10 +493,10 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
         highlightOrder(event.detail.orderId);
       }
     };
-    
+
     // Add event listener
     document.addEventListener("viewOrder", handleViewOrderEvent);
-    
+
     // Clean up event listener on unmount
     return () => {
       document.removeEventListener("viewOrder", handleViewOrderEvent);
@@ -483,8 +516,8 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
 
       const token = TokenManager.getToken();
       const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
       };
 
       const response = await axios.get(
@@ -514,21 +547,21 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
   // Highlight an order when it's selected from a notification
   const highlightOrder = (orderId) => {
     console.log("Highlighting order:", orderId);
-    
+
     // Find the order element
     setTimeout(() => {
       const orderElement = document.getElementById(`order-${orderId}`);
       if (orderElement) {
         // Scroll to the order
         orderElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        
+
         // Highlight with animation
         orderElement.classList.add("highlight-order");
         setTimeout(() => {
           orderElement.classList.remove("highlight-order");
         }, 2000);
       }
-  
+
       // Find the order data
       const order = orders.find((o) => o.order_id == orderId);
       if (order) {
@@ -540,7 +573,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       }
     }, 300);
   };
-  
+
   // Get color based on order status
   const getStatusColor = (status) => {
     if (!status) return "#6c757d";
@@ -792,17 +825,58 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
                           </div>
                           <div
                             style={{
-                              textTransform: "uppercase",
-                              fontSize: "0.7rem",
-                              fontWeight: "bold",
-                              padding: "3px 8px",
-                              borderRadius: "4px",
-                              display: "inline-block",
-                              backgroundColor: getStatusColor(order.status),
-                              color: "white",
+                              display: "flex",
+                              gap: "10px",
+                              alignItems: "center",
                             }}
                           >
-                            {order.status || "pending"}
+                            <div
+                              style={{
+                                textTransform: "uppercase",
+                                fontSize: "0.7rem",
+                                fontWeight: "bold",
+                                padding: "3px 8px",
+                                borderRadius: "4px",
+                                display: "inline-block",
+                                backgroundColor: getStatusColor(order.status),
+                                color: "white",
+                              }}
+                            >
+                              {order.status || "pending"}
+                            </div>
+
+                            {(!order.status ||
+                              order.status.toLowerCase() === "pending") && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (
+                                    window.confirm(
+                                      "Are you sure you want to cancel this order?"
+                                    )
+                                  ) {
+                                    // Add your cancel order logic here
+                                    console.log(
+                                      "Cancel order:",
+                                      order.order_id
+                                    );
+                                  }
+                                }}
+                                style={{
+                                  padding: "3px 8px",
+                                  backgroundColor: "#dc3545",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  fontSize: "0.7rem",
+                                  fontWeight: "bold",
+                                  marginTop: "10px",
+                                }}
+                              >
+                                CANCEL
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
