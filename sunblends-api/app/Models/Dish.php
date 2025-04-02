@@ -30,5 +30,16 @@ class Dish extends Model
     {
         return $this->hasMany(Cart::class, 'dish_id', 'dish_id');
     }
+
+    public function ratings()
+    {
+        return $this->hasMany(Rating::class, 'dish_id', 'dish_id');
+    }
+
+    // Add a method to calculate average rating
+    public function getAverageRatingAttribute()
+    {
+        return $this->ratings()->avg('rating') ?? 0;
+    }
     
 }

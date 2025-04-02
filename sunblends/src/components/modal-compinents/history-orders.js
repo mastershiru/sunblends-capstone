@@ -38,6 +38,48 @@ const OrderDetails = ({
     }
   }, [isOpenOrderDetails, selectedOrderId]);
 
+  useEffect(() => {
+    if (isOpenOrderDetails && selectedOrderId && cartItems.length > 0) {
+      // Fetch existing ratings for items in this order
+      const fetchExistingRatings = async () => {
+        try {
+          const token = TokenManager.getToken();
+          const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          };
+          
+          // For each item in the cart, check if it has been rated
+          const ratingPromises = cartItems.map(item => 
+            axios.get(`http://127.0.0.1:8000/api/ratings/check`, {
+              params: {
+                dish_id: item.Item_ID,
+                order_id: selectedOrderId
+              },
+              headers
+            })
+          );
+          
+          const results = await Promise.all(ratingPromises);
+          
+          // Update the ratings state
+          const newRatings = {};
+          results.forEach((result, index) => {
+            if (result.data.success && result.data.has_rating) {
+              newRatings[cartItems[index].Item_ID] = result.data.rating;
+            }
+          });
+          
+          setRatings(newRatings);
+        } catch (error) {
+          console.error("Error fetching existing ratings:", error);
+        }
+      };
+      
+      fetchExistingRatings();
+    }
+  }, [isOpenOrderDetails, selectedOrderId, cartItems]);
+
   const fetchOrderDetails = async (orderId) => {
     setIsLoading(true);
     setError(null);
@@ -72,6 +114,49 @@ const OrderDetails = ({
     } catch (error) {
       console.error("Error fetching order details:", error);
       setError("Failed to load order details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmitRating = async (dishId, rating) => {
+    try {
+      // Show a loading indicator or disable the stars while submitting
+      setIsLoading(true);
+      
+      // Get token from TokenManager
+      const token = TokenManager.getToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+      
+      // Submit the rating to the API
+      const response = await axios.post(
+        'http://127.0.0.1:8000/api/dishes/rate',
+        {
+          dish_id: dishId,
+          order_id: selectedOrderId,
+          rating: rating
+        },
+        { headers }
+      );
+      
+      if (response.data.success) {
+        // Show success message
+        alert("Thank you for rating this dish!");
+        
+        // Update the local state to show the rating is saved
+        const newRatings = { ...ratings };
+        newRatings[dishId] = rating;
+        setRatings(newRatings);
+      } else {
+        alert(response.data.message || "Failed to submit rating. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      alert("An error occurred while submitting your rating. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -340,38 +425,72 @@ const OrderDetails = ({
                               >
                                 {item.Item_Category || ""}
                               </div>
-                              {orderDetails?.status?.toLowerCase() ===
-                                "completed" && (
-                                <div
-                                  className="rating-container"
-                                  style={{
-                                    borderTop: "1px solid #eee",
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  <div style={{ fontSize: "15px" }}>
+                              {orderDetails?.status?.toLowerCase() === "completed" && (
+                              <div
+                                className="rating-container"
+                                style={{
+                                  borderTop: "1px solid #eee",
+                                  padding: "8px 0",
+                                  marginTop: "6px",
+                                  textAlign: "left"
+                                }}
+                              >
+                                <div style={{ 
+                                  fontSize: "15px", 
+                                  display: "flex", 
+                                  alignItems: "center",
+                                  justifyContent: "space-between" 
+                                }}>
+                                  <div>
+                                    <small style={{ color: "#666", marginRight: "5px" }}>Rate this dish:</small>
                                     {[1, 2, 3, 4, 5].map((star) => (
                                       <span
                                         key={star}
                                         onClick={() => {
-                                          const newRatings = { ...ratings };
-                                          newRatings[item.Item_ID] = star;
-                                          setRatings(newRatings);
+                                          if (!isLoading) {
+                                            handleSubmitRating(item.Item_ID, star);
+                                          }
                                         }}
                                         style={{
-                                          cursor: "pointer",
-                                          color:
-                                            star <= (ratings[item.Item_ID] || 0)
-                                              ? "#ffd700"
-                                              : "#ccc",
+                                          cursor: isLoading ? "default" : "pointer",
+                                          color: star <= (ratings[item.Item_ID] || 0) ? "#ffd700" : "#ccc",
+                                          fontSize: "18px",
+                                          transition: "color 0.2s",
+                                          marginRight: "2px"
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          if (!isLoading && !ratings[item.Item_ID]) {
+                                            // Only show hover effect if not already rated
+                                            const stars = e.target.parentNode.childNodes;
+                                            for (let i = 0; i < stars.length; i++) {
+                                              if (i < star) {
+                                                stars[i].style.color = "#ffcc00";
+                                              }
+                                            }
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          if (!isLoading && !ratings[item.Item_ID]) {
+                                            // Only reset on hover if not already rated
+                                            const stars = e.target.parentNode.childNodes;
+                                            for (let i = 0; i < stars.length; i++) {
+                                              stars[i].style.color = "#ccc";
+                                            }
+                                          }
                                         }}
                                       >
                                         ★
                                       </span>
                                     ))}
                                   </div>
+                                  {ratings[item.Item_ID] && (
+                                    <small style={{ color: "#28a745", fontStyle: "italic" }}>
+                                      Rating submitted
+                                    </small>
+                                  )}
                                 </div>
-                              )}
+                              </div>
+                            )}
                             </div>
                             <div
                               style={{

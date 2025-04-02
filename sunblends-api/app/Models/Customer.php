@@ -51,4 +51,9 @@ class Customer extends Authenticatable
     {
         return 'App.Models.Customer.'.$this->customer_id;
     }
+
+    public function ratings()
+    {
+        return $this->hasMany(Rating::class, 'order_id', 'order_id');
+    }
 }

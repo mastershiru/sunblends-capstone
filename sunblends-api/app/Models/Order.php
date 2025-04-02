@@ -50,4 +50,9 @@ class Order extends Model
     {
         return $this->hasOne(Transaction::class, 'order_id', 'order_id');
     }
+
+    public function ratings()
+    {
+        return $this->hasMany(Rating::class, 'order_id', 'order_id');
+    }
 }

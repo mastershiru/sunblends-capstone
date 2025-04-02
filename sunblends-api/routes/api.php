@@ -17,6 +17,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\GoogleLoginController;
 use App\Http\Controllers\reservationController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RatingController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -32,6 +33,8 @@ Route::middleware('auth:sanctum')->post('/logout', [GoogleLoginController::class
 
 Route::get('/menu-items', [MenuApiController::class, 'index']);
 Route::get('/menu-items/{id}', [MenuApiController::class, 'show']);
+Route::get('/menu-debug', [MenuApiController::class, 'debug']);
+Route::get('/advanced-menu', [MenuApiController::class, 'advancedMenu']);
 
 Route::get('/test/login', [LoginController::class, 'show']);
 
@@ -44,6 +47,13 @@ Route::post('/refresh-session', [AuthController::class, 'refreshSession']);
 Route::middleware('auth:sanctum')->post('/broadcasting/auth', function (Request $request) {
     return Broadcast::auth($request);
 });
+
+//Rating
+Route::middleware('auth:sanctum')->get('/ratings/check', [RatingController::class, 'checkRating']);
+Route::middleware('auth:sanctum')->post('/dishes/rate', [RatingController::class, 'rateDish']);
+Route::get('/dishes/{id}/ratings', [RatingController::class, 'getDishRatings']);
+Route::get('/featured-menu', [RatingController::class, 'getFeaturedMenuItems']);
+Route::get('/smart-featured-menu', [RatingController::class, 'getSmartFeaturedMenu']);
 
 // Public token validation endpoint (doesn't require authentication middleware)
 Route::post('/check-token', [AuthController::class, 'checkToken']);
