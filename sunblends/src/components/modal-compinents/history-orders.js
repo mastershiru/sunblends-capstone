@@ -513,12 +513,15 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
 
   // Highlight an order when it's selected from a notification
   const highlightOrder = (orderId) => {
+    console.log("Highlighting order:", orderId);
+    
     // Find the order element
     setTimeout(() => {
       const orderElement = document.getElementById(`order-${orderId}`);
       if (orderElement) {
         // Scroll to the order
         orderElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        
         // Highlight with animation
         orderElement.classList.add("highlight-order");
         setTimeout(() => {
@@ -526,10 +529,14 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
         }, 2000);
       }
   
-      // Find the order data and open details
+      // Find the order data
       const order = orders.find((o) => o.order_id == orderId);
       if (order) {
+        console.log("Found order to highlight:", order);
+        // Open order details
         handleViewDetails(order);
+      } else {
+        console.warn("Order not found in list:", orderId);
       }
     }, 300);
   };

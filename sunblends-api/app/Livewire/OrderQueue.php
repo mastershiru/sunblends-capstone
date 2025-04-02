@@ -170,7 +170,13 @@ class OrderQueue extends Component
                 'description' => $this->statusDescriptions[$status] ?? null,
                 'is_important' => in_array($status, ['completed', 'ready', 'cancelled']),
                 'items_count' => $order->cart->count(),
-                'notify_type' => $this->getNotifyType($status)
+                'notify_type' => $this->getNotifyType($status),
+                'delivery_option' => $order->delivery_option,
+                'address' => $order->address,
+                'pickup_in' => $order->pickup_in ? $order->pickup_in->format('Y-m-d H:i:s') : null,
+                'delivered_in' => $order->delivered_in ? $order->delivered_in->format('Y-m-d H:i:s') : null,
+                'payment_method' => $order->payment_method,
+                'created_at' => $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : null,
             ];
             
             // If this is an online order with a customer

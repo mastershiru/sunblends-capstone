@@ -210,95 +210,55 @@ export const NavbarProvider = ({ children }) => {
 
   // Initialize Echo once component mounts
   useEffect(() => {
-    // Clean up existing connections
-    if (window.Echo) {
-      try {
-        window.Echo.disconnect();
-      } catch (e) {
-        console.error("Error disconnecting Echo:", e);
-      }
-    }
-
+    // Initialize WebSocket connection
     try {
-      // First initialize Pusher
+      console.log("Setting up WebSocket connection...");
+      
       window.Pusher = Pusher;
-
-      // Check Pusher is available
-      if (!window.Pusher) {
-        throw new Error("Pusher not available");
-      }
-
-      // Get token for authenticated channels (if available)
-      const token = localStorage.getItem("token");
-
-      // Initialize Echo
       window.Echo = new Echo({
         broadcaster: "pusher",
         key: "sunblends-key",
-        wsHost: "localhost",
+        cluster: "mt1", // Add this line - using default cluster
+        wsHost: window.location.hostname, // Use dynamic hostname instead of hardcoded "localhost"
         wsPort: 8080,
         disableStats: true,
-        forceTLS: false,
+        forceTLS: false, 
         encrypted: false,
         enabledTransports: ["ws", "wss"],
-        auth: token
-          ? {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-              },
-            }
-          : undefined,
+        auth: TokenManager.hasToken() ? {
+          headers: {
+            Authorization: `Bearer ${TokenManager.getToken()}`,
+            Accept: "application/json",
+          },
+        } : undefined,
       });
-
-      console.log("Echo initialized successfully");
-
-      // Set up channel listeners
+  
+      console.log("WebSocket connection initialized successfully");
+      
+      // Listen on public channel for all order updates
       const publicChannel = window.Echo.channel("orders");
-
       publicChannel.listen(".OrderStatusChanged", (data) => {
         console.log("Received OrderStatusChanged event:", data);
         handleOrderStatusUpdate(data);
       });
-
-      // Also listen without the dot prefix as a fallback
-      publicChannel.listen("OrderStatusChanged", (data) => {
-        console.log("Received OrderStatusChanged event (no dot):", data);
-        handleOrderStatusUpdate(data);
-      });
-
-      // If logged in, listen on private channel
-      if (isLoggedIn && userData && userData.customer_id) {
-        try {
-          const privateChannel = window.Echo.private(
-            `customer.${userData.customer_id}`
-          );
-
-          privateChannel.listen(".OrderStatusChanged", (data) => {
-            console.log("Received private OrderStatusChanged event:", data);
-            handlePrivateOrderUpdate(data);
-          });
-
-          console.log(
-            `Subscribed to private channel: customer.${userData.customer_id}`
-          );
-        } catch (error) {
-          console.error("Error setting up private channel:", error);
-        }
+      
+      // Listen on private channel for this user's orders
+      if (isLoggedIn && userData?.customer_id) {
+        const privateChannel = window.Echo.private(`customer.${userData.customer_id}`);
+        privateChannel.listen(".OrderStatusChanged", (data) => {
+          console.log("Received private OrderStatusChanged event:", data);
+          handlePrivateOrderUpdate(data);
+        });
+        console.log(`Subscribed to private channel: customer.${userData.customer_id}`);
       }
     } catch (error) {
-      console.error("Error setting up Echo:", error);
+      console.error("Error setting up WebSocket connection:", error);
     }
-
-    // Cleanup function
+    
     return () => {
       if (window.Echo) {
-        console.log("Cleaning up Echo connections");
-        try {
-          window.Echo.disconnect();
-        } catch (e) {
-          console.error("Error during cleanup:", e);
-        }
+        console.log("Disconnecting WebSocket...");
+        window.Echo.disconnect();
       }
     };
   }, [isLoggedIn, userData]);
@@ -306,44 +266,85 @@ export const NavbarProvider = ({ children }) => {
   // Handle order status updates from public channel
   const handleOrderStatusUpdate = (data) => {
     console.log("Processing order status update:", data);
-
-    // Extract notification data
-    const notificationData = data.orderData || data;
-
-    // Only process if this notification is for the current user
-    if (
-      isLoggedIn &&
-      userData &&
-      notificationData.customer_id === userData.customer_id
-    ) {
-      console.log("Order update is for current user");
-
-      // Show toast notification
-      showNotification(
-        notificationData.message ||
-          `Order #${notificationData.order_id} status updated to ${notificationData.status}`,
-        notificationData.notify_type ||
-          getNotificationType(notificationData.status),
-        5000
-      );
-
-      // Refresh notifications from server
-      fetchNotifications(true); // silent refresh
-
-      // Show modal for important updates
-      if (isImportantStatus(notificationData.status)) {
-        showNotificationModal(notificationData);
+    
+    // Extract order data
+    const orderData = data.orderData || data;
+    console.log("Extracted order data:", orderData);
+    
+    // Check if this is for the current user
+    if (!isLoggedIn || !userData || orderData.customer_id !== userData.customer_id) {
+      console.log("Order update not for current user, ignoring");
+      return; // Not for this user
+    }
+    
+    console.log("Order update is for current user, processing...");
+    
+    // Always show a toast notification
+    showNotification(
+      `Order #${orderData.order_id} is now ${orderData.status}`,
+      getNotificationType(orderData.status),
+      5000
+    );
+    
+    // Refresh notifications list silently
+    fetchNotifications(true);
+    
+    // Check if this is a critical status that needs immediate attention
+    const isCriticalStatus = ["ready", "completed"].includes(orderData.status?.toLowerCase());
+    
+    if (isCriticalStatus) {
+      console.log("Critical status detected, showing immediate modal");
+      
+      // Play notification sound first
+      
+      
+      // Determine delivery type for custom message
+      const isDelivery = orderData.delivery_option;
+      
+      console.log("Delivery type:", isDelivery ? "delivery" : "pickup");
+      
+      // Create status-specific message
+      let title, message;
+      
+      if (orderData.status?.toLowerCase() === "ready") {
+        title = isDelivery 
+          ? "Your Order is On the Way!" 
+          : "Your Order is Ready for Pickup!";
+          
+        message = isDelivery
+          ? "Your food is ready and out for delivery! It will arrive at your location soon."
+          : "Great news! Your order is now ready for pickup. Please come to our store.";
+      } else { // completed
+        title = "Your Order is Complete!";
+        message = isDelivery
+          ? "Your order has been delivered successfully. Enjoy your meal!"
+          : "Your order has been completed. Thank you for visiting Sunblends!";
       }
+      
+      // Show the immediate modal
+      console.log("Showing modal with title:", title);
+      showImmediateStatusModal({
+        order_id: orderData.order_id,
+        status: orderData.status,
+        title: title,
+        message: message,
+        delivery_method: isDelivery ? 'delivery' : 'pickup',
+        timestamp: new Date().toISOString(),
+        is_critical: true
+      });
+    } else {
+      console.log("Non-critical status update, not showing modal");
     }
   };
+
 
   // Handle private notifications (already filtered for this user)
   const handlePrivateOrderUpdate = (data) => {
     console.log("Processing private order update:", data);
-
+  
     // Extract notification data
     const notificationData = data.orderData || data;
-
+  
     // Show toast notification
     showNotification(
       notificationData.message ||
@@ -352,12 +353,57 @@ export const NavbarProvider = ({ children }) => {
         getNotificationType(notificationData.status),
       5000
     );
-
+  
     // Refresh notifications from server
     fetchNotifications(true); // silent refresh
 
-    // Show modal for important notifications
-    showNotificationModal(notificationData);
+    handleOrderStatusUpdate(data);
+  
+    // CRITICAL STATUSES - Ready or Completed
+    const criticalStatuses = ["ready", "completed"];
+    if (criticalStatuses.includes(notificationData.status?.toLowerCase())) {
+      // Determine message based on delivery method
+      let customMessage = '';
+      const isDelivery = notificationData.delivery_option;
+                      
+      if (notificationData.status?.toLowerCase() === "ready") {
+        customMessage = isDelivery 
+          ? "Your order is ready and out for delivery! It will arrive soon."
+          : "Your order is ready for pickup! Please come to our store to get your food.";
+      } else if (notificationData.status?.toLowerCase() === "completed") {
+        customMessage = isDelivery
+          ? "Your order has been delivered successfully! Enjoy your meal."
+          : "Your order has been completed. Thank you for picking up your food!";
+      }
+      
+      // Use a timeout to ensure the notification appears even if user is in another tab
+      setTimeout(() => {
+        showNotificationModal({
+          ...notificationData,
+          // Add special flag for critical notifications
+          is_critical: true,
+          // Add custom message based on delivery type
+          custom_message: customMessage
+        });
+      }, 500);
+    }
+    // Still show modal for other important updates
+    else {
+      showNotificationModal(notificationData);
+    }
+  };
+
+  const showImmediateStatusModal = (data) => {
+    console.log("Showing immediate status modal:", data);
+    
+    // Set the modal data
+    setStatusModalData(data);
+    
+    // Open the modal
+    setStatusModalOpen(true);
+    
+    // Play sound again just to be sure
+    
   };
 
   // Get notification type based on status
@@ -382,14 +428,60 @@ export const NavbarProvider = ({ children }) => {
 
   // Show notification modal
   const showNotificationModal = (notificationData) => {
+    // Create more descriptive title based on status
+    let title = "Order Update";
+    let message = notificationData.custom_message || null;
+    
+    // If no custom message was provided, create default title and message
+    if (!message) {
+      if (notificationData.status?.toLowerCase() === "ready") {
+        title = "Your Order is Ready for Pickup!";
+        message = notificationData.description || notificationData.message || 
+          "Your order is hot and ready! Come and get it while it's fresh.";
+      } else if (notificationData.status?.toLowerCase() === "completed") {
+        title = "Your Order is Complete!";
+        message = notificationData.description || notificationData.message || 
+          "Great news! Your order has been completed.";
+      } else if (notificationData.status?.toLowerCase() === "processing") {
+        title = "Your Order is Being Prepared";
+        message = notificationData.description || notificationData.message || 
+          "Our kitchen is now preparing your delicious order.";
+      } else if (notificationData.status?.toLowerCase() === "cancelled") {
+        title = "Your Order has been Cancelled";
+        message = notificationData.description || notificationData.message || 
+          "We're sorry, but your order has been cancelled. Please contact us for assistance.";
+      } else {
+        // Default fallback message
+        message = notificationData.description || notificationData.message || 
+          getStatusMessage(notificationData.status).modalMessage;
+      }
+    }
+    
+    // Set modal data with enhanced information
     setStatusModalData({
       order_id: notificationData.order_id,
       status: notificationData.status,
-      message: notificationData.description || notificationData.message,
+      message: message,
       total_price: notificationData.total_price,
+      title: title,
+      is_critical: notificationData.is_critical || false,
+      delivery_method: notificationData.delivery_method || notificationData.order_type
     });
-
+  
+    // Open the status modal
     setStatusModalOpen(true);
+    
+    // Play sound for critical notifications (ready/completed)
+    if (notificationData.is_critical || 
+        ["ready", "completed"].includes(notificationData.status?.toLowerCase())) {
+      try {
+        // Try to play notification sound
+        const audio = new Audio('/notification-sound.mp3');
+        audio.play().catch(e => console.log('Could not play notification sound', e));
+      } catch (e) {
+        console.log('Error playing sound', e);
+      }
+    }
   };
 
   // Get appropriate status messages
@@ -536,30 +628,46 @@ export const NavbarProvider = ({ children }) => {
 
   // Function to view a notification's details and mark it as read
   const viewNotificationDetails = async (id) => {
-  const notification = await markNotificationAsRead(id);
-  
-  if (notification && notification.order_id) {
-    // Close notification center
-    setIsNotificationCenterOpen(false);
-    
-    // Open orders modal first if not already open
-    if (!isOpenOrders) {
-      setIsOpenOrders(true);
+    try {
+      // First mark the notification as read
+      const notification = await markNotificationAsRead(id);
       
-      // We need a slight delay to ensure the orders modal loads
-      // before we try to highlight a specific order
-      setTimeout(() => {
-        // Then view order details
-        viewOrderDetails(notification.order_id);
-      }, 500);
-    } else {
-      // If orders modal already open, just show details
-      viewOrderDetails(notification.order_id);
+      if (notification && notification.order_id) {
+        // Close notification center if it's open
+        if (isNotificationCenterOpen) {
+          setIsNotificationCenterOpen(false);
+        }
+        
+        // Step 1: Make sure order history modal is open
+        if (!isOpenOrders) {
+          setIsOpenOrders(true);
+          
+          // Need to wait for the modal to be rendered before accessing elements
+          setTimeout(() => {
+            // Step 2: Once order history modal is open, view the specific order
+            const event = new CustomEvent("viewOrder", {
+              detail: { orderId: notification.order_id }
+            });
+            document.dispatchEvent(event);
+            
+            // Step 3: Open the order details
+            // The viewOrder event handler in Orders will handle this
+          }, 300);
+        } else {
+          // If orders modal is already open, just trigger the view order event
+          const event = new CustomEvent("viewOrder", {
+            detail: { orderId: notification.order_id }
+          });
+          document.dispatchEvent(event);
+        }
+      }
+      
+      return notification;
+    } catch (error) {
+      console.error("Error viewing notification:", error);
+      return null;
     }
-  }
-  
-  return notification;
-};
+  };
 
   // Function to mark all notifications as read
   const clearNotifications = async () => {
@@ -834,9 +942,26 @@ export const NavbarProvider = ({ children }) => {
       try {
         // Try to call logout API if available
         if (isLoggedIn && TokenManager.hasToken()) {
-          await TokenManager.post('/logout').catch(() => {
-            // Ignore errors during logout API call
-          });
+          const token = TokenManager.getToken();
+          
+          // Make an explicit API call to the logout endpoint
+          try {
+            await axios.post(
+              `${API_BASE_URL}/logout`, 
+              {}, // Empty body
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log("Successfully logged out on server");
+          } catch (error) {
+            // Just log errors, but continue with client-side logout
+            console.error("Error during server logout:", error);
+          }
         }
       } finally {
         // Reset state and clear tokens regardless of API success
@@ -854,6 +979,14 @@ export const NavbarProvider = ({ children }) => {
         localStorage.removeItem("userData");
         localStorage.removeItem("token");
         localStorage.removeItem("email");
+        
+        // Clean up WebSocket connection
+        if (window.Echo) {
+          window.Echo.disconnect();
+        }
+        
+        // Redirect to home page for clean slate
+        window.location.href = '/';
         
         alert("You have been logged out.");
       }

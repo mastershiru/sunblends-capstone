@@ -324,7 +324,7 @@ class CartApiController extends Controller
                 'transaction_reference' => $transactionReference,
                 'order_id' => $order->order_id,
                 'customer_id' => $customer->customer_id,
-                'transaction_status' => 'completed',
+                'transaction_status' => 'pending',
                 'transaction_date' => now(), 
                 'cash_amount' => $order->total_price ? $request->totalAmount : 0,
                 'change_amount' => 0, 

@@ -25,7 +25,11 @@ class OrderController extends Controller
                     'created_at' => $order->created_at->format('Y-m-d H:i:s'),
                     'updated_at' => $order->updated_at->format('Y-m-d H:i:s'),
                     'cart_count' => $order->cart->count(),
-                    'cart' => $order->cart
+                    'cart' => $order->cart,
+                    'payment_method' => $order->payment_method,
+                    'delivery_option' => $order->delivery_option,
+                    'address' => $order->address,
+                    'pickup_in' => $order->pickup_in ? $order->pickup_in->format('Y-m-d H:i:s') : null,
                 ];
             });
         

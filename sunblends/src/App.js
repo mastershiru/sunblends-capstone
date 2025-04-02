@@ -13,12 +13,17 @@ import AllMenu from "./components/allMenu";
 import BookingTable from "./components/reservation";
 import NotificationManager from "./components/notifications/Notification-manager";
 import RouteGuard from './utils/RouteGuard';
+import NotificationModal from "./components/modal-compinents/notification-modal";
+
+
+
 
 function App() {
   return (
     <NavbarProvider>
       <Router>
         <NotificationManager />
+        <NotificationModal />
         <Navbar />
         <Modals />
         <RouteGuard>

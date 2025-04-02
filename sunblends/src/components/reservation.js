@@ -592,6 +592,7 @@ const BookingTable = () => {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [reservationStatus, setReservationStatus] = useState({ message: "", success: null });
+  
 
   useEffect(() => {
     if (window.location.hash) {
@@ -653,7 +654,7 @@ const BookingTable = () => {
         setDate("");
         setTime("");
         
-        showNotification("Your reservation has been created successfully", "success", 5000);
+       
       } else {
         setReservationStatus({
           message: response.data.message || "Failed to create reservation",
@@ -682,84 +683,6 @@ const BookingTable = () => {
 
   return (
     <>
-      <NotificationManager />
-
-      <NotificationModal
-        isOpen={statusModalOpen}
-        onClose={() => setStatusModalOpen(false)}
-        data={statusModalData}
-        onViewOrder={viewOrderDetails}
-      />
-
-      {/* Notifications center modal */}
-      <NotificationsCenter
-        isOpen={isNotificationCenterOpen}
-        onClose={() => setIsNotificationCenterOpen(false)}
-        notifications={notifications}
-        onMarkAllAsRead={clearNotifications}
-        onViewDetails={(orderId) => {
-          setIsNotificationCenterOpen(false);
-          viewOrderDetails(orderId);
-        }}
-      />
-      <Navbar
-        isLoggedIn={isLoggedIn}
-        userData={userData}
-        cartNumber={cartNumber}
-        isDropdownOpen={isDropdownOpen}
-        dropdownRef={dropdownRef}
-        isOpen={isOpen}
-        toggleDropdown={toggleDropdown}
-        toggleModalCart={toggleModalCart}
-        toggleModalLogin={toggleModalLogin}
-        toggleModalRegister={toggleModalRegister}
-        toggleModalOrders={toggleModalOrders}
-        setIsOpenEditProfile={setIsOpenEditProfile}
-        handleLogout={handleLogout}
-        toggleNavbar={toggleNavbar}
-        toggleNotificationCenter={toggleNotificationCenter}
-        notificationBadgeCount={notificationBadgeCount}
-        hasNewNotification={hasNewNotification}
-        setIsNotificationCenterOpen={setIsNotificationCenterOpen}
-      />
-      <Login
-        isOpenLogin={isOpenLogin}
-        toggleModalLogin={toggleModalLogin}
-        setIsLoggedIn={setIsLoggedIn}
-        email={email}
-        setEmail={setEmail}
-        password={password}
-        setPassword={setPassword}
-        setUserData={setUserData}
-        toggleModalRegister={toggleModalRegister}
-      />
-      <EditProfile
-        isOpenEditProfile={isOpenEditProfile}
-        setIsOpenEditProfile={setIsOpenEditProfile}
-        userData={userData}
-        setUserData={setUserData}
-      />
-      <Register
-        isOpenRegister={isOpenRegister}
-        toggleModalRegister={toggleModalRegister}
-        toggleModalLogin={toggleModalLogin}
-      />
-
-      <Cart
-        isOpenCart={isOpenCart}
-        toggleModalCart={toggleModalCart}
-        cartItems={cartItems}
-        setCartItems={setCartItems}
-        setCartNumber={setCartNumber}
-        isLoggedIn={isLoggedIn}
-        toggleModalLogin={toggleModalLogin}
-        toggleModalCheckout={toggleModalCheckout}
-        isOpenCheckout={isOpenCheckout}
-      />
-      <Orders
-        isOpenOrders={isOpenOrders}
-        toggleModalOrders={toggleModalOrders}
-      />
       <section id="reservation" style={{ backgroundImage: `url(${imagebg})` }}>
         <div className="container container-reservation">
           <div className="booking-box">
@@ -799,31 +722,69 @@ const BookingTable = () => {
                 type="date"
                 value={date}
                 min={new Date().toISOString().split('T')[0]} // Set minimum date to today
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  const dayOfWeek = selectedDate.getDay();
+                  
+                  // Check if weekend (0 = Sunday, 6 = Saturday)
+                  if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    alert("Weekend dates are not available for reservation. Please select a weekday (Monday-Friday).");
+                  } else {
+                    setDate(e.target.value);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc'
+                }}
               />
+              <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
+                Reservations available Weekdays only (no weekends)
+              </small>
             </div>
             <div className="form-group">
               <label>Time</label>
-              <input
-                type="time"
+              <select
                 value={time}
-                min="10:00"
-                max="17:00"
-                onChange={(e) => {
-                  // Validate time is between 10am and 5pm
-                  const selectedTime = e.target.value;
-                  const [hours, minutes] = selectedTime.split(':').map(Number);
-                  
-                  if ((hours > 10 || (hours === 10 && minutes >= 0)) && 
-                      (hours < 17 || (hours === 17 && minutes === 0))) {
-                    setTime(selectedTime);
-                  } else {
-                    alert("Please select a time between 10:00 AM and 5:00 PM");
-                    // Revert to valid time or empty
-                    setTime("");
-                  }
+                onChange={(e) => setTime(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  color: time ? '#333' : '#757575',
                 }}
-              />
+              >
+                <option value="">Select a time</option>
+                
+                {/* Morning hours */}
+                <optgroup label="Morning">
+                  <option value="10:00">10:00 AM</option>
+                  <option value="10:30">10:30 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="11:30">11:30 AM</option>
+                </optgroup>
+                
+                {/* Afternoon hours */}
+                <optgroup label="Afternoon">
+                  <option value="12:00">12:00 PM</option>
+                  <option value="12:30">12:30 PM</option>
+                  <option value="13:00">1:00 PM</option>
+                  <option value="13:30">1:30 PM</option>
+                  <option value="14:00">2:00 PM</option>
+                  <option value="14:30">2:30 PM</option>
+                  <option value="15:00">3:00 PM</option>
+                  <option value="15:30">3:30 PM</option>
+                  <option value="16:00">4:00 PM</option>
+                  <option value="16:30">4:30 PM</option>
+                  <option value="17:00">5:00 PM</option>
+                </optgroup>
+              </select>
+              
               <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
                 Reservation hours: 10:00 AM - 5:00 PM
               </small>

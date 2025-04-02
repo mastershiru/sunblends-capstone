@@ -16,7 +16,8 @@ const NotificationsCenter = () => {
     toggleNotificationCenter,
     notifications,
     clearNotifications,
-    viewOrderDetails
+    viewOrderDetails,
+    viewNotificationDetails,
   } = useNavbar();
 
   if (!isNotificationCenterOpen) return null;
@@ -197,7 +198,14 @@ const NotificationsCenter = () => {
             notifications.map((notification) => (
               <div
                 key={notification.id}
-                onClick={() => viewOrderDetails(notification.order_id)}
+                onClick={() => {
+                  // Mark notification as read and view order details in one step
+                  // Instead of just calling viewOrderDetails directly
+                  toggleNotificationCenter(); // Close notification center
+                  
+                  // Use this function which handles opening both modals correctly
+                  viewNotificationDetails(notification.id);
+                }}
                 style={{
                   padding: "1rem",
                   borderBottom: "1px solid #f3f4f6",
@@ -210,7 +218,6 @@ const NotificationsCenter = () => {
                   transition: "background-color 0.2s",
                   borderRadius: "0.25rem",
                   margin: "0.25rem 0",
-                  // Add left border for unread notifications
                   borderLeft: isNotificationRead(notification)
                     ? "none"
                     : "3px solid #ff8243",

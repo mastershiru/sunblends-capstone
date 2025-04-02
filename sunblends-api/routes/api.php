@@ -28,6 +28,8 @@ Route::get('/dish', [Dish_Controller::class, 'index']);
 
 Route::post('/login', [LoginController::class, 'login']);
 
+Route::middleware('auth:sanctum')->post('/logout', [GoogleLoginController::class, 'logout']);
+
 Route::get('/menu-items', [MenuApiController::class, 'index']);
 Route::get('/menu-items/{id}', [MenuApiController::class, 'show']);
 

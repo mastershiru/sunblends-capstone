@@ -19,7 +19,7 @@ class Order extends Model
         'payment_method',
         'status_order',
         'type_order',
-        'delivery_option', // Changed from is_advance to is_delivery to match migration
+        'delivery_option', 
         'address',
         'pickup_in',
         'delivered_in'
