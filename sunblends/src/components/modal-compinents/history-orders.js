@@ -933,15 +933,10 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
                         transition: "all 0.3s ease",
                         cursor: "pointer",
                         }}
-                        onClick={() => {
-                        if (
-                          window.confirm(
-                          `Are you sure you want to view details for Order #${order.order_id}?`
-                          )
-                        ) {
+                        onClick={() => {                       
                           handleViewDetails(order);
                         }
-                        }}
+                        }
                       >
                         <div
                         style={{

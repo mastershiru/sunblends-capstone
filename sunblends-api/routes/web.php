@@ -1,6 +1,5 @@
 <?php
 
-
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Dish_Controller;
@@ -16,59 +15,48 @@ use App\Http\Controllers\OrderQueueController;
 use App\Http\Controllers\reservationController;
 use App\Http\Controllers\reservationDashboardController;
 use App\Http\Controllers\dineInController;
+use App\Http\Controllers\EmployeeController;
 
 use App\Http\Middleware\CustomerView;
 
-
-// routes for customer
-
-Route::middleware(['customer_view'])->group(function () {
-    
-});
-
-// routes for employee with middleware
-
-Route::middleware(['employee_view'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index']); 
-
-    Route::get('/reservation/Dashboard', [reservationDashboardController::class, 'index']);
-
-    Route::get('/Dine-in', [dineInController::class, 'index']);
-
-    Route::get('/Orders-Queue', [OrderQueueController::class, 'index']);
-
-    Route::get('/menu', [menuController::class, 'index']);
-
-    Route::get('/Transaction', function () {
-        return view('Transaction_Dashboard');
-    });
-
-    Route::get('/Sales', function () {
-        return view('sale_dashboard');
-    });
-
-});
-
-// For guest and customers
-
+// Login routes (accessible to all)
 Route::get('/employee/login', function () {
     return view('employee_login');
-});
-
+})->name('employee.login');
+Route::post('/login', [LoginController::class, 'login'])->name('login');
 Route::get('/logout', [LogoutController::class, 'logout'])->name('logout');
 
-Route::post('/login', [LoginController::class, 'login']);
+// Customer routes
+Route::middleware(['customer_view'])->group(function () {
+    // Your customer-specific routes
+});
 
-Route::get('/dish', [Dish_Controller::class, 'index']);
+// Employee routes with base employee authentication
+Route::middleware(['employee_view'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard'); 
+    Route::get('/Orders-Queue', [OrderQueueController::class, 'index'])->name('orders.queue');
+    Route::get('/Dine-in', [dineInController::class, 'index'])->name('dine.in');
+});
 
-Route::get('/reservation', [reservationController::class, 'index']);
+// Manager/Admin routes that require manager privileges
+Route::middleware(['manager'])->group(function () {
+    Route::get('/reservation/Dashboard', [reservationDashboardController::class, 'index'])->name('reservation.dashboard');
+    Route::get('/menu', [menuController::class, 'index'])->name('menu.index');
+    Route::get('/Transaction', function () {
+        return view('Transaction_Dashboard');
+    })->name('transaction.index');
+    Route::get('/Sales', function () {
+        return view('sale_dashboard');
+    })->name('sales.index');
+    Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');
+});
 
+// For guests and customers
+Route::get('/dish', [Dish_Controller::class, 'index'])->name('dish.index');
+Route::get('/reservation', [reservationController::class, 'index'])->name('reservation.index');
 Route::get('/home', function () {
     return view('dish.home');
 })->name('home');
-
-
-
 
 Route::get('/test-email/{id}', function ($id) {
     // Find the user by ID
@@ -85,18 +73,4 @@ Route::get('/test-email/{id}', function ($id) {
 
 Route::get('/', function () {
     return view('welcome');
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+})->name('welcome');

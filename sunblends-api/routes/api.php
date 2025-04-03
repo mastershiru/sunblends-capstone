@@ -18,6 +18,8 @@ use App\Http\Controllers\GoogleLoginController;
 use App\Http\Controllers\reservationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RatingController;
+use App\Http\Controllers\ReportController;
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -76,6 +78,12 @@ Route::get('/orders/{id}/items', [OrderController::class, 'getOrderItems']);
 Route::get('/orders/customer/{id}', [OrderController::class, 'getCustomerOrders']);
 Route::middleware('auth:sanctum')->post('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
 
+//report
+Route::get('/reports/sales', [ReportController::class, 'exportSalesReport'])->name('api.reports.sales');
+
+Route::middleware(['auth', 'role:Super Admin|Manager'])->group(function () {
+    Route::get('/employees', [EmployeeController::class, 'index']);
+});
 
 Route::get('/dashboard', [DashboardController::class, 'index']);
 

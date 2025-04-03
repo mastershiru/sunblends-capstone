@@ -26,11 +26,20 @@ class SalesDashboard extends Component
     
     // Daily sales data for chart
     public $dailySales = [];
+
+    // Export report properties - ADD THESE
+    public $exportMonth;
+    public $exportYear;
+    public $exportFormat = 'pdf';
     
     public function mount()
     {
         // Set default date range
         $this->setDateRange('today');
+
+        // Initialize export month/year to current - ADD THIS
+        $this->exportMonth = date('m');
+        $this->exportYear = date('Y');
     }
     
     /**

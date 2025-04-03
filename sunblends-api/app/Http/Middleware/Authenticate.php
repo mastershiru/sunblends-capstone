@@ -12,6 +12,13 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
-        return $request->expectsJson() ? null : route('home');
+        // Inside the Authenticate middleware
+        if (Auth::guard('employee')->check()) {
+            // User is authenticated, continue
+            return $next($request);
+        } else {
+            // Not authenticated, redirect to login
+            return redirect('employee/login');
+        }
     }
 }

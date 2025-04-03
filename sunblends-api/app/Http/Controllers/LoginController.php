@@ -12,86 +12,148 @@ use Illuminate\Support\Str;
 use App\Models\Customer;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class LoginController extends Controller
 {
-
     
     public function login(Request $request)
-{
-    $validated = $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
 
-    $customer = Customer::where('customer_email', $request->email)->first();
-    $employee = Employee::where('employee_email', $request->email)->first();
+        $customer = Customer::where('customer_email', $request->email)->first();
+        $employee = Employee::where('employee_email', $request->email)->first();
 
-    try {
-        if ($customer && hash('sha256', $request->password) === $customer->customer_password) {
-            // First, delete any existing tokens to prevent accumulation
-            $customer->tokens()->delete();
+        try {
+            // Customer login logic (unchanged)
+            if ($customer && hash('sha256', $request->password) === $customer->customer_password) {
+                // First, delete any existing tokens to prevent accumulation
+                $customer->tokens()->delete();
+                
+                // Properly log the user in using Laravel's auth
+                Auth::guard('customer')->login($customer, $request->remember ?? false);
+                
+                // Create a single Sanctum token named 'customer-token'
+                $token = $customer->createToken('customer-token', ['customer'])->plainTextToken;
+                
+                // Save in session for compatibility with session-based auth
+                session([
+                    'logged_in_customer' => $customer,
+                    'guard' => 'customer'
+                ]);
+                
+                // Return response with token
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Customer login successful!',
+                    'token' => $token,
+                    'redirect' => '/dish',
+                    'user' => $customer
+                ])->withCookie(cookie('laravel_session', Session::getId(), 120));
+            }
             
-            // Properly log the user in using Laravel's auth
-            Auth::guard('customer')->login($customer, $request->remember ?? false);
-            
-            // Create a single Sanctum token named 'customer-token'
-            $token = $customer->createToken('customer-token', ['customer'])->plainTextToken;
-            
-            // Save in session for compatibility with session-based auth
-            session([
-                'logged_in_customer' => $customer,
-                'guard' => 'customer'
-            ]);
-            
-            // Return response with token
+            // Employee login logic (updated)
+            if ($employee) {
+                // Check if using new hashed password format
+                if (Hash::check($request->password, $employee->employee_password)) {
+                    // Password is verified with Hash::check
+                    
+                    // First, delete any existing tokens to prevent accumulation
+                    $employee->tokens()->delete();
+                    
+                    // Properly log the user in using Laravel's auth
+                    Auth::guard('employee')->login($employee, $request->remember ?? false);
+                    
+                    // Get employee roles and permissions
+                    $roles = $employee->getRoleNames();
+                    $permissions = $employee->getAllPermissions()->pluck('name');
+                    
+                    // Create Sanctum token - for API access
+                    $token = $employee->createToken('employee-token', ['employee'])->plainTextToken;
+                    
+                    // Determine redirect based on role
+                    $redirect = '/dashboard';
+                    
+                    // Save in session for compatibility with session-based auth
+                    session([
+                        'logged_in_employee' => $employee,
+                        'guard' => 'employee',
+                        'roles' => $roles,
+                        'permissions' => $permissions
+                    ]);
+                    
+                    // Return response with redirect to a web route, not API route
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Employee login successful!',
+                        'token' => $token,
+                        'redirect' => $redirect,
+                        'user' => $employee,
+                        'roles' => $roles,
+                        'permissions' => $permissions
+                    ]);
+                }
+                // Fallback for old password format
+                else if (hash('sha256', $request->password) === $employee->employee_password) {
+                    // This is using the old password format, but we should update it to the new format
+                    $employee->employee_password = Hash::make($request->password);
+                    $employee->save();
+                    
+                    // First, delete any existing tokens to prevent accumulation
+                    $employee->tokens()->delete();
+                    
+                    // Properly log the user in using Laravel's auth
+                    Auth::guard('employee')->login($employee, $request->remember ?? false);
+                    
+                    // Get employee roles and permissions
+                    $roles = $employee->getRoleNames();
+                    $permissions = $employee->getAllPermissions()->pluck('name');
+                    
+                    // Create Sanctum token - for API access
+                    $token = $employee->createToken('employee-token', ['employee'])->plainTextToken;
+                    
+                    // Determine redirect based on role
+                    $redirect = '/dashboard';
+                    
+                    // Save in session for compatibility with session-based auth
+                    session([
+                        'logged_in_employee' => $employee,
+                        'guard' => 'employee',
+                        'roles' => $roles,
+                        'permissions' => $permissions
+                    ]);
+                    
+                    // Return response with redirect to a web route, not API route
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Employee login successful!',
+                        'token' => $token,
+                        'redirect' => $redirect,
+                        'user' => $employee,
+                        'roles' => $roles,
+                        'permissions' => $permissions
+                    ]);
+                }
+            }
+
+            // If no matching user was found
             return response()->json([
-                'success' => true,
-                'message' => 'Customer login successful!',
-                'token' => $token,
-                'redirect' => '/dish',
-                'user' => $customer
-            ])->withCookie(cookie('laravel_session', Session::getId(), 120));
-        }
-        
-        if ($employee && hash('sha256', $request->password) === $employee->employee_password) {
-            // Properly log the user in using Laravel's auth
-            Auth::guard('employee')->login($employee, $request->remember ?? false);
-            
-            // Create Sanctum token - for API access
-            $token = $employee->createToken('employee-token', ['employee'])->plainTextToken;
-            
-            // Save in session for compatibility with session-based auth
-            session([
-                'logged_in_employee' => $employee,
-                'guard' => 'employee'
-            ]);
-            
-            // Return response with redirect to a web route, not API route
+                'success' => false,
+                'message' => 'Invalid credentials'
+            ], 401);
+                
+        } catch (\Exception $e) {
+            \Log::error('Login error: ' . $e->getMessage());
             return response()->json([
-                'success' => true,
-                'message' => 'Employee login successful!',
-                'token' => $token,
-                'redirect' => '/dashboard',
-                'user' => $employee
-            ]);
+                'success' => false,
+                'message' => 'An error occurred during login',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // If no matching user was found
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid credentials'
-        ], 401);
-            
-    } catch (\Exception $e) {
-        \Log::error('Login error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'An error occurred during login',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
 
     public function index(Request $request)
     {
@@ -117,7 +179,6 @@ class LoginController extends Controller
         }
 
         return json_encode(['user' => $user,
-                            'message' => 'User found.']);
-    
+                           'message' => 'User found.']);
     }
 }

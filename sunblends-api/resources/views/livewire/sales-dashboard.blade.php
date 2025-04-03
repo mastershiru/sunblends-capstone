@@ -1,7 +1,56 @@
 <div>
 <div class="p-4">
     <div class="mb-6">
-        <h1 class="text-2xl font-bold mb-4">Sales Dashboard</h1>
+        <h1 class="text-2xl font-bold mb-4">Sales Dashboard</h1><!-- Export Report Section - Added at the top -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 class="text-md font-medium mb-3">Export Monthly Sales Report</h3>
+            <div class="flex flex-col md:flex-row gap-4 items-end">
+                <div class="flex-1">
+                    <label for="exportMonth" class="block text-sm font-medium text-gray-700">Month</label>
+                    <select id="exportMonth" wire:model.live="exportMonth" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                
+                <div class="flex-1">
+                    <label for="exportYear" class="block text-sm font-medium text-gray-700">Year</label>
+                    <select id="exportYear" wire:model.live="exportYear" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        @for ($year = date('Y'); $year >= 2020; $year--)
+                            <option value="{{ $year }}">{{ $year }}</option>
+                        @endfor
+                    </select>
+                </div>
+                
+                <div class="flex-1">
+                    <label for="exportFormat" class="block text-sm font-medium text-gray-700">Format</label>
+                    <select id="exportFormat" wire:model.live="exportFormat" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option value="pdf">PDF</option>
+                        <option value="xlsx">Excel</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <a href="{{ url('/api/reports/sales?month=' . $exportMonth . '&year=' . $exportYear . '&format=' . $exportFormat) }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export Report
+                    </a>
+                </div>
+            </div>
+        </div>
         
         <!-- Date Range Selector -->
         <div class="bg-white rounded-lg shadow p-4 mb-6">
