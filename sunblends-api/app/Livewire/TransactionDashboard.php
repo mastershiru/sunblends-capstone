@@ -9,6 +9,7 @@ use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\Customer;
+use App\Notifications\OrderStatusChanged;
 
 class TransactionDashboard extends Component
 {
@@ -188,7 +189,7 @@ class TransactionDashboard extends Component
             $transaction = Transaction::findOrFail($transactionId);
             
             // Validate status
-            if (!in_array($status, ['completed', 'pending', 'failed'])) {
+            if (!in_array($status, ['completed', 'pending', 'cancelled'])) {
                 throw new \Exception('Invalid status provided');
             }
             

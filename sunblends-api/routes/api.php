@@ -74,6 +74,7 @@ Route::post('/notifications/mark-all-read', [NotificationController::class, 'mar
 Route::get('/orders/{id}', [OrderController::class, 'show']);
 Route::get('/orders/{id}/items', [OrderController::class, 'getOrderItems']);
 Route::get('/orders/customer/{id}', [OrderController::class, 'getCustomerOrders']);
+Route::middleware('auth:sanctum')->post('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
 
 
 Route::get('/dashboard', [DashboardController::class, 'index']);

@@ -80,10 +80,17 @@ function Login({
       });
   }
 
-  // Updated Google login function with secure token storage
+  
+  // Updated Google login function with email domain validation
   const handleGoogleLogin = (credentialResponse) => {
     const credentialResponseDecoded = jwtDecode(credentialResponse.credential);
     const { name, email, picture } = credentialResponseDecoded;
+    
+    // Check if email is from the organization domain
+    if (!email.endsWith('@tua.edu.ph')) {
+      alert("Please use your TUA organizational email (@tua.edu.ph) to login.");
+      return;
+    }
 
     axios
       .post(

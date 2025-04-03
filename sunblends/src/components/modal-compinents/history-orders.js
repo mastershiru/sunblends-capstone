@@ -53,7 +53,7 @@ const OrderDetails = ({
           const ratingPromises = cartItems.map(item => 
             axios.get(`http://127.0.0.1:8000/api/ratings/check`, {
               params: {
-                dish_id: item.Item_ID,
+                dish_id: item.Item_Dish_ID,
                 order_id: selectedOrderId
               },
               headers
@@ -119,7 +119,7 @@ const OrderDetails = ({
     }
   };
 
-  const handleSubmitRating = async (dishId, rating) => {
+  const handleSubmitRating = async (dishId, rating, itemId) => {
     try {
       // Show a loading indicator or disable the stars while submitting
       setIsLoading(true);
@@ -147,9 +147,9 @@ const OrderDetails = ({
         // Show success message
         alert("Thank you for rating this dish!");
         
-        // Update the local state to show the rating is saved
+        // Update the local state to show the rating is saved - using itemId as key
         const newRatings = { ...ratings };
-        newRatings[dishId] = rating;
+        newRatings[itemId] = rating;
         setRatings(newRatings);
       } else {
         alert(response.data.message || "Failed to submit rating. Please try again.");
@@ -447,23 +447,25 @@ const OrderDetails = ({
                                       <span
                                         key={star}
                                         onClick={() => {
-                                          if (!isLoading) {
-                                            handleSubmitRating(item.Item_ID, star);
+                                          if (!isLoading && !ratings[item.Item_ID]) {
+                                            // Pass item ID as third parameter
+                                            handleSubmitRating(item.Item_Dish_ID, star, item.Item_ID);
                                           }
                                         }}
                                         style={{
-                                          cursor: isLoading ? "default" : "pointer",
+                                          cursor: (isLoading || ratings[item.Item_ID]) ? "default" : "pointer",
                                           color: star <= (ratings[item.Item_ID] || 0) ? "#ffd700" : "#ccc",
                                           fontSize: "18px",
                                           transition: "color 0.2s",
-                                          marginRight: "2px"
+                                          marginRight: "2px",
+                                          userSelect: "none" // Prevent text selection
                                         }}
                                         onMouseEnter={(e) => {
                                           if (!isLoading && !ratings[item.Item_ID]) {
                                             // Only show hover effect if not already rated
                                             const stars = e.target.parentNode.childNodes;
-                                            for (let i = 0; i < stars.length; i++) {
-                                              if (i < star) {
+                                            for (let i = 1; i < stars.length; i++) { // Start at 1 to skip the "Rate this dish" text
+                                              if (i <= star) {
                                                 stars[i].style.color = "#ffcc00";
                                               }
                                             }
@@ -473,8 +475,12 @@ const OrderDetails = ({
                                           if (!isLoading && !ratings[item.Item_ID]) {
                                             // Only reset on hover if not already rated
                                             const stars = e.target.parentNode.childNodes;
-                                            for (let i = 0; i < stars.length; i++) {
-                                              stars[i].style.color = "#ccc";
+                                            for (let i = 1; i < stars.length; i++) { // Start at 1 to skip the "Rate this dish" text
+                                              stars[i].style.color = "#ccc"; 
+                                              // Apply gold color back to rated stars
+                                              if (i <= (ratings[item.Item_ID] || 0)) {
+                                                stars[i].style.color = "#ffd700";
+                                              }
                                             }
                                           }
                                         }}
@@ -485,7 +491,7 @@ const OrderDetails = ({
                                   </div>
                                   {ratings[item.Item_ID] && (
                                     <small style={{ color: "#28a745", fontStyle: "italic" }}>
-                                      Rating submitted
+                                      Rating submitted ({ratings[item.Item_ID]}★)
                                     </small>
                                   )}
                                 </div>
@@ -621,6 +627,50 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       document.removeEventListener("viewOrder", handleViewOrderEvent);
     };
   }, [orders]);
+
+  const handleCancelOrder = async (orderId, e) => {
+    e.stopPropagation();
+    
+    if (!window.confirm("Are you sure you want to cancel this order?")) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const token = TokenManager.getToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.post(
+        `http://127.0.0.1:8000/api/orders/${orderId}/cancel`,
+        {},
+        { headers }
+      );
+      
+      if (response.data.success) {
+        // Update the local orders state to reflect the change
+        setOrders(orders.map(order => {
+          if (order.order_id === orderId) {
+            return { ...order, status: 'cancelled' };
+          }
+          return order;
+        }));
+        
+        alert("Order cancelled successfully");
+      } else {
+        alert(response.data.message || "Failed to cancel order");
+      }
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      alert("An error occurred while cancelling your order. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Update the fetchOrders function:
   const fetchOrders = async () => {
@@ -851,30 +901,30 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
                     onClick={() => {
                       toggleModalOrders();
                       // Scroll to menu section
-                      document
+                        document
                         .getElementById("menu")
                         ?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    style={{
-                      padding: "8px 16px",
-                      backgroundColor: "#ff8243",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      marginTop: "10px",
-                    }}
-                  >
-                    Order Now
-                  </button>
-                </div>
-              ) : (
-                <div className="orders-list">
-                  {orders.map((order) => (
-                    <div
-                      key={order.order_id}
-                      id={`order-${order.order_id}`}
+                      }}
                       style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#ff8243",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        marginTop: "10px",
+                      }}
+                      >
+                      Order Now
+                      </button>
+                    </div>
+                    ) : (
+                    <div className="orders-list">
+                      {orders.map((order) => (
+                      <div
+                        key={order.order_id}
+                        id={`order-${order.order_id}`}
+                        style={{
                         backgroundColor: "#f9f9f9",
                         borderRadius: "8px",
                         marginBottom: "15px",
@@ -882,130 +932,126 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
                         boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                         transition: "all 0.3s ease",
                         cursor: "pointer",
-                      }}
-                      onClick={() => handleViewDetails(order)}
-                    >
-                      <div
+                        }}
+                        onClick={() => {
+                        if (
+                          window.confirm(
+                          `Are you sure you want to view details for Order #${order.order_id}?`
+                          )
+                        ) {
+                          handleViewDetails(order);
+                        }
+                        }}
+                      >
+                        <div
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
                         }}
-                      >
+                        >
                         <div
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
                           }}
                         >
                           <div
-                            style={{
-                              backgroundColor: getStatusColor(order.status),
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "50%",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "white",
-                            }}
+                          style={{
+                            backgroundColor: getStatusColor(order.status),
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                          }}
                           >
-                            <FontAwesomeIcon
-                              icon={getStatusIcon(order.status)}
-                            />
+                          <FontAwesomeIcon
+                            icon={getStatusIcon(order.status)}
+                          />
                           </div>
 
                           <div>
-                            <h3 style={{ margin: 0, fontSize: "1.05rem" }}>
-                              Order #{order.order_id}
-                            </h3>
-                            <div
-                              style={{
-                                fontSize: "0.85rem",
-                                color: "#666",
-                                marginTop: "2px",
-                              }}
-                            >
-                              {formatDate(order.created_at)}
-                            </div>
+                          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>
+                            Order #{order.order_id}
+                          </h3>
+                          <div
+                            style={{
+                            fontSize: "0.85rem",
+                            color: "#666",
+                            marginTop: "2px",
+                            }}
+                          >
+                            {formatDate(order.created_at)}
+                          </div>
                           </div>
                         </div>
 
                         <div style={{ textAlign: "right" }}>
                           <div
-                            style={{
-                              fontSize: "1rem",
-                              fontWeight: "600",
-                              marginBottom: "5px",
-                            }}
+                          style={{
+                            fontSize: "1rem",
+                            fontWeight: "600",
+                            marginBottom: "5px",
+                          }}
                           >
-                            ₱{parseFloat(order.total_price || 0).toFixed(2)}
+                          ₱{parseFloat(order.total_price || 0).toFixed(2)}
                           </div>
                           <div
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            alignItems: "center",
+                          }}
+                          >
+                          <div
                             style={{
-                              display: "flex",
-                              gap: "10px",
-                              alignItems: "center",
+                            textTransform: "uppercase",
+                            fontSize: "0.7rem",
+                            fontWeight: "bold",
+                            padding: "3px 8px",
+                            borderRadius: "4px",
+                            display: "inline-block",
+                            backgroundColor: getStatusColor(order.status),
+                            color: "white",
                             }}
                           >
-                            <div
-                              style={{
-                                textTransform: "uppercase",
-                                fontSize: "0.7rem",
-                                fontWeight: "bold",
-                                padding: "3px 8px",
-                                borderRadius: "4px",
-                                display: "inline-block",
-                                backgroundColor: getStatusColor(order.status),
-                                color: "white",
-                              }}
-                            >
-                              {order.status || "pending"}
-                            </div>
+                            {order.status || "pending"}
+                          </div>
 
-                            {(!order.status ||
-                              order.status.toLowerCase() === "pending") && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (
-                                    window.confirm(
-                                      "Are you sure you want to cancel this order?"
-                                    )
-                                  ) {
-                                    // Add your cancel order logic here
-                                    console.log(
-                                      "Cancel order:",
-                                      order.order_id
-                                    );
-                                  }
-                                }}
-                                style={{
-                                  padding: "3px 8px",
-                                  backgroundColor: "#dc3545",
-                                  color: "white",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  cursor: "pointer",
-                                  fontSize: "0.7rem",
-                                  fontWeight: "bold",
-                                  marginTop: "10px",
-                                }}
-                              >
-                                CANCEL
-                              </button>
-                            )}
+                          {(!order.status ||
+                            order.status.toLowerCase() === "pending" ||
+                            order.status.toLowerCase() === "processing") && (
+                            <button
+                            onClick={(e) => handleCancelOrder(order.order_id, e)}
+                            style={{
+                              padding: "3px 8px",
+                              backgroundColor: "#dc3545",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "0.7rem",
+                              fontWeight: "bold",
+                              marginTop: "10px",
+                            }}
+                            >
+                            CANCEL
+                            </button>
+                          )}
                           </div>
                         </div>
+                        </div>
                       </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    )}
+                  </div>
 
-            {/* Modal Footer */}
+                  
             <div
               style={{
                 padding: "15px 20px",

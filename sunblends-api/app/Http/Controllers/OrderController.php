@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Cart;
+use App\Models\Transaction;
 
 
 class OrderController extends Controller
@@ -91,6 +92,7 @@ class OrderController extends Controller
             
             return [
                 'Item_ID' => $cartItem->cart_id,
+                'Item_Dish_ID' => $cartItem->dishes->dish_id,
                 'Item_Title' => $cartItem->dishes->dish_name ?? 'Unknown Item',
                 'Item_Price' => floatval($cartItem->dishes->Price) ?? 0,
                 'Item_Quantity' => intval($cartItem->quantity) ?? 1,
@@ -104,4 +106,45 @@ class OrderController extends Controller
             'items' => $formattedItems
         ]);
     }
+
+    public function cancelOrder($id)
+    {
+        try {
+            $order = Order::findOrFail($id);
+            
+            // Check if order can be cancelled (only pending or processing orders)
+            if (!in_array(strtolower($order->status_order), ['pending', 'processing', null])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This order cannot be cancelled due to its current status.'
+                ], 400);
+            }
+            
+            // Update order status
+            $order->status_order = 'cancelled';
+            $order->save();
+            
+            // Also update any related transaction status
+            if ($transaction = Transaction::where('order_id', $order->order_id)->first()) {
+                // Change transaction status from "failed" to "cancelled"
+                
+            $transaction->transaction_status = 'cancelled';
+                
+                $transaction->save();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Order successfully cancelled',
+                'order' => $order
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel order',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

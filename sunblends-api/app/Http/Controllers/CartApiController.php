@@ -93,6 +93,7 @@ class CartApiController extends Controller
         // Check if item already exists in cart
         $existingCartItem = Cart::where('customer_id', $customer->customer_id)
             ->where('dish_id', $request->dish_id)
+            ->where('order_id', null) 
             ->first();
 
         if ($existingCartItem) {

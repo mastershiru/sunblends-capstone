@@ -154,6 +154,14 @@ class OrderQueue extends Component
             $order->update([
                 'status_order' => $status
             ]);
+
+            $transaction = Transaction::where('order_id', $id)->first();
+            if($status == 'cancelled' && $transaction) {
+                // Change transaction status from "failed" to "cancelled"
+                $transaction->update([
+                    'transaction_status' => 'cancelled'
+                ]);
+            }
             
             // Create notification payload with rich data
             $notificationData = [

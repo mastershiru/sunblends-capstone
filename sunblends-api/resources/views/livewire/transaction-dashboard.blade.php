@@ -80,7 +80,7 @@
                     <option value="">All Statuses</option>
                     <option value="completed">Completed</option>
                     <option value="pending">Pending</option>
-                    <option value="failed">Failed</option>
+                    <option value="cancelled">Cancelled</option>
                 </select>
             </div>
             
@@ -234,12 +234,12 @@
                                     class="text-sm px-2 py-2 rounded-md {{ 
                                         $transaction->transaction_status === 'pending' ? 'bg-yellow-100' : 
                                         ($transaction->transaction_status === 'completed' ? 'bg-green-100' : 
-                                        ($transaction->transaction_status === 'failed' ? 'bg-red-100' : '')) 
+                                        ($transaction->transaction_status === 'cancelled' ? 'bg-red-100' : '')) 
                                     }}"
                                 >
                                     <option value="pending" {{ $transaction->transaction_status === 'pending' ? 'selected' : '' }} class="bg-yellow-100">Pending</option>
                                     <option value="completed" {{ $transaction->transaction_status === 'completed' ? 'selected' : '' }} class="bg-green-100">Completed</option>
-                                    <option value="failed" {{ $transaction->transaction_status === 'failed' ? 'selected' : '' }} class="bg-red-100">Failed</option>
+                                    <option value="cancelled" {{ $transaction->transaction_status === 'cancelled' ? 'selected' : '' }} class="bg-red-100">Cancelled</option>
                                 </select>
                                 
                                 <button wire:click="viewTransactionDetails({{ $transaction->transaction_id }})" class="text-white bg-amber-500 px-4 py-2 rounded-md hover:bg-amber-600">
