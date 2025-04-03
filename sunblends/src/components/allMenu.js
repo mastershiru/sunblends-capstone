@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faSearch, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlus,
+  faSearch,
+  faSpinner,
+  faStar,
+} from "@fortawesome/free-solid-svg-icons";
 import imagebg from "../assets/images/menu-bg.png";
 import titleshape from "../assets/images/title-shape.svg";
 import Navbar from "./Navbar";
@@ -11,15 +15,17 @@ import NotificationsCenter from "./modal-compinents/notification-center";
 import NotificationManager from "./notifications/Notification-manager";
 import { useNavbar } from "../context/NavbarContext";
 
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 const AllMenu = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [addingToCart, setAddingToCart] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-  
+
   // Get all necessary values and functions from NavbarContext
-  const { 
+  const {
     isLoggedIn,
     userData,
     addToCartNumber,
@@ -31,7 +37,7 @@ const AllMenu = () => {
     isNotificationCenterOpen,
     notifications,
     clearNotifications,
-    toggleNotificationCenter
+    toggleNotificationCenter,
   } = useNavbar();
 
   // Navigate to other sections
@@ -93,12 +99,12 @@ const AllMenu = () => {
             dish_id: dish.id,
             quantity: 1,
           },
-          { 
+          {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Accept': 'application/json'
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Accept: "application/json",
             },
-            withCredentials: true 
+            withCredentials: true,
           }
         );
       }
@@ -113,7 +119,6 @@ const AllMenu = () => {
       });
 
       // Increment cart count
-      
     } catch (error) {
       console.error("Error adding item to cart:", error);
       alert("Failed to add item to cart. Please try again.");
@@ -142,7 +147,7 @@ const AllMenu = () => {
         onMarkAllAsRead={clearNotifications}
         onViewDetails={viewOrderDetails}
       />
-      
+
       <Navbar />
 
       <section
@@ -220,23 +225,22 @@ const AllMenu = () => {
                       </div>
                       <div className="dish-rating">
                         {dish.Dish_Rating}
-                        <i className="uil uil-star"></i>
+                        <FontAwesomeIcon
+                          icon={faStar}
+                          style={{ color: "#FFC010" }}
+                        />
                       </div>
                       <div className="dish-title">
                         <h3 className="h3-title">{dish.Dish_Title}</h3>
                         <p>{dish.category}</p>
                       </div>
                       <div className="dish-info">
-                        <ul>
-                          <li>
-                            <p>Type</p>
-                            <b>{dish.Dish_Type}</b>
-                          </li>
-                          <li className="person">
+                            <>
+                            {dish.Dish_Type}</>
+                          {/* <li className="person">
                             <p>Persons</p>
                             <b>{dish.Dish_Persons || 1}</b>
-                          </li>
-                        </ul>
+                          </li> */}
                       </div>
                       <div className="dist-bottom-row">
                         <ul>
