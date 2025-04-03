@@ -62,7 +62,7 @@ export default function Home() {
               <div className="col-lg-6">
                 <div className="banner-text">
                   <h1 className="h1-title">
-                    SHE LOVED TEA, I AM COFFEE. <span>WE BLEND.</span>
+                    SHE LOVED <span>TEA</span>, <br></br> I AM COFFEE. <br></br> WE BLEND.
                   </h1>
                   <p className="tagline">
                     We offer a wonderful range of uniquely delectable food and

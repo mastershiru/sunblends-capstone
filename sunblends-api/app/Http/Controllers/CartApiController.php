@@ -315,6 +315,8 @@ class CartApiController extends Controller
             ->whereNull('order_id')
             ->update(['order_id' => $order->order_id]);
 
+        
+
         // Record transaction in the same request
         try {
             // Generate a unique transaction reference

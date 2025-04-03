@@ -81,7 +81,7 @@ class MenuDashboard extends Component
 
         // Add dish_picture validation only for new dishes
         if (!$this->dish_id) {
-            $validationRules['dish_picture'] = 'required|image|max:1024';
+            $validationRules['dish_picture'] = 'required|image|max:2024';
         } 
             
 
