@@ -250,107 +250,125 @@ class CartApiController extends Controller
      * Checkout and create order
      */
     public function checkout(Request $request)
-    {
-        Log::info('Checkout request', $request->all());
-        
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'paymentMethod' => 'required|string',
-            'deliveryMethod' => 'required|string',
-            'totalAmount' => 'required|numeric',
-            'notes' => 'nullable|string'
-        ]);
+{
+    Log::info('Checkout request', $request->all());
+    
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'paymentMethod' => 'required|string',
+        'deliveryMethod' => 'required|string',
+        'totalAmount' => 'required|numeric',
+        'notes' => 'nullable|string',
+        'cashAmount' => 'required_if:paymentMethod,Cash|numeric|min:0',
+        'changeAmount' => 'required_if:paymentMethod,Cash|numeric|min:0',
+    ]);
 
-        if ($validator->fails()) {
-            Log::error('Checkout validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $customer = Customer::where('customer_email', $request->email)->first();
-
-        if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Customer not found'
-            ], 404);
-        }
-
-        $cartItems = Cart::with('dishes')
-            ->where('customer_id', $customer->customer_id)
-            ->whereNull('order_id')
-            ->get();
-
-        if ($cartItems->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cart is empty'
-            ], 400);
-        }
-
-        // Create new order
-        $orderData = [
-            'customer_id' => $customer->customer_id,
-            'total_price' => $request->totalAmount,
-            'type_order' => 'online',
-            'payment_method' => $request->paymentMethod,
-            'delivery_option' => $request->deliveryMethod
-        ];
-
-        // Add address or pickup time based on delivery method
-        if ($request->deliveryMethod === 'delivery') {
-            $orderData['address'] = $request->notes;
-        } else {
-            $orderData['pickup_in'] = now()->addMinutes(30)->format('Y-m-d H:i:s'); // Default 30 min pickup time
-        }
-
-        // Create order
-        $order = Order::create($orderData);
-        
-        // Link cart items to the order
-        Cart::where('customer_id', $customer->customer_id)
-            ->whereNull('order_id')
-            ->update(['order_id' => $order->order_id]);
-
-        
-
-        // Record transaction in the same request
-        try {
-            // Generate a unique transaction reference
-            $transactionReference = 'TRX-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT) . date('ymd');
-            
-            // Create transaction record with fields that match your model's fillable array
-            Transaction::create([
-                'transaction_reference' => $transactionReference,
-                'order_id' => $order->order_id,
-                'customer_id' => $customer->customer_id,
-                'transaction_status' => 'pending',
-                'transaction_date' => now(), 
-                'cash_amount' => $order->total_price ? $request->totalAmount : 0,
-                'change_amount' => 0, 
-            ]);
-            
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to record transaction', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'order_id' => $order->order_id
-            ]);
-            
-        }
-
+    if ($validator->fails()) {
+        Log::error('Checkout validation failed', ['errors' => $validator->errors()]);
         return response()->json([
-            'success' => true,
-            'message' => 'Order placed successfully',
-            'Order_ID' => $order->order_id,
-            'transaction_reference' => $transactionReference ?? null
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    $customer = Customer::where('customer_email', $request->email)->first();
+
+    if (!$customer) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Customer not found'
+        ], 404);
+    }
+
+    $cartItems = Cart::with('dishes')
+        ->where('customer_id', $customer->customer_id)
+        ->whereNull('order_id')
+        ->get();
+
+    if ($cartItems->isEmpty()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Cart is empty'
+        ], 400);
+    }
+
+    // Create new order
+    $orderData = [
+        'customer_id' => $customer->customer_id,
+        'total_price' => $request->totalAmount,
+        'type_order' => 'online',
+        'payment_method' => $request->paymentMethod,
+        'delivery_option' => $request->deliveryMethod
+    ];
+
+    // Add address or pickup time based on delivery method
+    if ($request->deliveryMethod === 'delivery') {
+        $orderData['address'] = $request->notes;
+    } else if ($request->deliveryMethod === 'pickup') {
+        // If pickup method and notes contain a time value
+        if (!empty($request->notes)) {
+            // Parse the time value and create a pickup time
+            try {
+                $pickupTime = date('Y-m-d ') . $request->notes . ':00';
+                $orderData['pickup_in'] = $pickupTime;
+            } catch (\Exception $e) {
+                // Fallback to default 30 min if time parsing fails
+                $orderData['pickup_in'] = now()->addMinutes(30)->format('Y-m-d H:i:s');
+            }
+        } else {
+            // Default 30 min pickup time if no time provided
+            $orderData['pickup_in'] = now()->addMinutes(30)->format('Y-m-d H:i:s');
+        }
+    }
+
+    // Create order
+    $order = Order::create($orderData);
+    
+    // Link cart items to the order
+    Cart::where('customer_id', $customer->customer_id)
+        ->whereNull('order_id')
+        ->update(['order_id' => $order->order_id]);
+
+    // Record transaction
+    try {
+        // Generate a unique transaction reference
+        $transactionReference = 'TRX-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT) . date('ymd');
+        
+        // Create transaction record with cash and change amount
+        $transactionData = [
+            'transaction_reference' => $transactionReference,
+            'order_id' => $order->order_id,
+            'customer_id' => $customer->customer_id,
+            'transaction_status' => 'pending',
+            'transaction_date' => now(),
+            'cash_amount' => $request->paymentMethod === 'Cash' ? $request->cashAmount : 0,
+            'change_amount' => $request->paymentMethod === 'Cash' ? $request->changeAmount : 0,
+        ];
+        
+        $transaction = Transaction::create($transactionData);
+        
+        Log::info('Transaction created successfully', [
+            'transaction_id' => $transaction->transaction_id,
+            'transaction_reference' => $transactionReference,
+            'order_id' => $order->order_id
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Failed to record transaction', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'order_id' => $order->order_id
         ]);
     }
 
+    return response()->json([
+        'success' => true,
+        'message' => 'Order placed successfully',
+        'Order_ID' => $order->order_id,
+        'transaction_reference' => $transactionReference ?? null
+    ]);
+}
 
 
     public function getCartCount($customer_id)

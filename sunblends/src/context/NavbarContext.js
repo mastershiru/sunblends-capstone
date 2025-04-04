@@ -230,6 +230,7 @@ export const NavbarProvider = ({ children }) => {
           headers: {
             Authorization: `Bearer ${TokenManager.getToken()}`,
             Accept: "application/json",
+            'X-Requested-With': 'XMLHttpRequest'
           },
         } : undefined,
       });

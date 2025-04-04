@@ -161,6 +161,11 @@ class OrderQueue extends Component
                 $transaction->update([
                     'transaction_status' => 'cancelled'
                 ]);
+            }elseif($status == 'completed' && $transaction) {
+                // Change transaction status from "pending" to "completed"
+                $transaction->update([
+                    'transaction_status' => 'completed'
+                ]);
             }
             
             // Create notification payload with rich data

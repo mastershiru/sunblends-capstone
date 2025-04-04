@@ -92,6 +92,11 @@ function Login({
       return;
     }
 
+    // Set CSRF token in headers before making the request
+    if (window.csrfToken) {
+      axios.defaults.headers.common['X-CSRF-TOKEN'] = window.csrfToken;
+    }
+    
     axios
       .post(
         "http://127.0.0.1:8000/api/auth/google/callback",

@@ -82,22 +82,17 @@ const EditProfile = ({ isOpenEditProfile, setIsOpenEditProfile, userData }) => {
                       </span>
                     </h6>
                     <h6>
-                      Phone:{" "}
+                      Phone:{"N/A"}
                       <span style={{ fontWeight: "normal" }}>
                         {profileData.customer_number}
                       </span>
                     </h6>
-                    <h6>
-                      Password:{" "}
-                      <span style={{ fontWeight: "normal" }}>***********</span>
-                    </h6>
+                    
                   </div>
                 </>
               )}
 
-              <div className="form-element">
-                <button>Edit</button>
-              </div>
+              
             </div>
           </div>
         </div>

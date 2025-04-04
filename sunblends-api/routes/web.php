@@ -16,6 +16,7 @@ use App\Http\Controllers\reservationController;
 use App\Http\Controllers\reservationDashboardController;
 use App\Http\Controllers\dineInController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\ActivityLogController;
 
 use App\Http\Middleware\CustomerView;
 
@@ -36,10 +37,6 @@ Route::middleware(['employee_view'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard'); 
     Route::get('/Orders-Queue', [OrderQueueController::class, 'index'])->name('orders.queue');
     Route::get('/Dine-in', [dineInController::class, 'index'])->name('dine.in');
-});
-
-// Manager/Admin routes that require manager privileges
-Route::middleware(['manager'])->group(function () {
     Route::get('/reservation/Dashboard', [reservationDashboardController::class, 'index'])->name('reservation.dashboard');
     Route::get('/menu', [menuController::class, 'index'])->name('menu.index');
     Route::get('/Transaction', function () {
@@ -48,6 +45,14 @@ Route::middleware(['manager'])->group(function () {
     Route::get('/Sales', function () {
         return view('sale_dashboard');
     })->name('sales.index');
+    Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+});
+
+
+
+// Manager/Admin routes that require manager privileges
+Route::middleware(['manager'])->group(function () {
+    
     Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');
 });
 

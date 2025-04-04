@@ -40,15 +40,18 @@ Route::get('/advanced-menu', [MenuApiController::class, 'advancedMenu']);
 
 Route::get('/test/login', [LoginController::class, 'show']);
 
-Route::post('auth/google/callback', [GoogleLoginController::class, 'googleLogin']);
+Route::post('/auth/google/callback', [GoogleLoginController::class, 'googleLogin']);
 
 Route::post('/reservation/create', [reservationController::class, 'create']);
+Route::get('reservations/customer/{customerId}', [ReservationController::class, 'getCustomerReservations']);
+Route::post('reservations/{reservationId}/cancel', [ReservationController::class, 'cancelReservation']);
 
 Route::post('/refresh-session', [AuthController::class, 'refreshSession']);
 
 Route::middleware('auth:sanctum')->post('/broadcasting/auth', function (Request $request) {
     return Broadcast::auth($request);
 });
+
 
 //Rating
 Route::middleware('auth:sanctum')->get('/ratings/check', [RatingController::class, 'checkRating']);
@@ -83,6 +86,10 @@ Route::get('/reports/sales', [ReportController::class, 'exportSalesReport'])->na
 
 Route::middleware(['auth', 'role:Super Admin|Manager'])->group(function () {
     Route::get('/employees', [EmployeeController::class, 'index']);
+});
+
+Route::get('/csrf-token', function (Request $request) {
+    return response()->json(['csrf_token' => csrf_token()]);
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index']);

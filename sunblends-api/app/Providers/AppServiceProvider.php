@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Maatwebsite\Excel\ExcelServiceProvider;
 use Barryvdh\DomPDF\ServiceProvider as DomPDFServiceProvider;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Auth;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,7 +31,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Configure default options for PDF export if needed
-        // You can add any PDF defaults here
+        // Helper function to check employee roles
+        Blade::directive('employeeHasRole', function ($expression) {
+            return "<?php 
+                \$employee = null;
+                if (Auth::guard('employee')->check()) {
+                    \$employee = Auth::guard('employee')->user();
+                } elseif (session('logged_in_employee')) {
+                    \$employee = session('logged_in_employee');
+                }
+                
+                if (\$employee && (
+                    in_array(\$employee->role_id, $expression) || 
+                    (isset(\$employee->role) && in_array(\$employee->role->name, $expression))
+                )) : 
+            ?>";
+        });
+        
+        Blade::directive('endemployeeHasRole', function () {
+            return "<?php endif; ?>";
+        });
     }
 }

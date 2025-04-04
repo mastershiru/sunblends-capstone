@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Livewire\CustomerReservation;
 use App\Models\Reservation;
+use App\Models\Customer;
 
 class reservationController extends Controller
 {
@@ -61,4 +62,81 @@ class reservationController extends Controller
             ], 500);
         }
     }
+
+    public function getCustomerReservations($customerId)
+{
+    try {
+        // Validate the customer exists
+        $customer = Customer::find($customerId);
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found'
+            ], 404);
+        }
+        
+        // Get all reservations for this customer, newest first
+        $reservations = Reservation::where('customer_id', $customerId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'reservations' => $reservations
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to retrieve reservations',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+// Add this method to cancel a reservation
+public function cancelReservation($reservationId)
+{
+    try {
+        $reservation = Reservation::find($reservationId);
+        
+        if (!$reservation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reservation not found'
+            ], 404);
+        }
+        
+        // Check if reservation can be cancelled
+        if ($reservation->reservation_status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reservation is already cancelled'
+            ], 400);
+        }
+        
+        if ($reservation->reservation_status === 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot cancel a completed reservation'
+            ], 400);
+        }
+        
+        // Cancel the reservation
+        $reservation->reservation_status = 'cancelled';
+        $reservation->save();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Reservation cancelled successfully',
+            'reservation' => $reservation
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to cancel reservation',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
 }

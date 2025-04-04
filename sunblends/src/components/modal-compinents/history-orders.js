@@ -11,6 +11,9 @@ import {
   faClock,
   faExclamationTriangle,
   faShoppingBag,
+  faCalendarAlt,
+  faUser,
+  faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import "../../assets/css/modal.css";
 
@@ -599,16 +602,21 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
   const { userData, isLoggedIn } = useNavbar();
 
   const [orders, setOrders] = useState([]);
+  const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingReservations, setLoadingReservations] = useState(false);
   const [error, setError] = useState(null);
+  const [reservationError, setReservationError] = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [activeTab, setActiveTab] = useState("orders"); // "orders" or "reservations"
 
   // Update the orders fetching logic
   useEffect(() => {
     if (isOpenOrders && isLoggedIn && userData) {
       fetchOrders();
+      fetchReservations();
     }
   }, [isOpenOrders, isLoggedIn, userData]);
 
@@ -672,6 +680,41 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
     }
   };
 
+  // Fetch reservations
+  const fetchReservations = async () => {
+    setLoadingReservations(true);
+    setReservationError(null);
+
+    try {
+      // Get user ID from userData in context
+      if (!userData || !userData.customer_id) {
+        throw new Error("User data not found");
+      }
+
+      const token = TokenManager.getToken();
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      };
+
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/reservations/customer/${userData.customer_id}`,
+        { headers }
+      );
+
+      if (response.data && response.data.success) {
+        setReservations(response.data.reservations);
+      } else {
+        throw new Error("Failed to fetch reservations");
+      }
+    } catch (err) {
+      console.error("Error fetching reservations:", err);
+      setReservationError("Failed to load your reservations. Please try again.");
+    } finally {
+      setLoadingReservations(false);
+    }
+  };
+
   // Update the fetchOrders function:
   const fetchOrders = async () => {
     setLoading(true);
@@ -713,9 +756,55 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
     setIsOrderDetailsOpen(true);
   };
 
+  // Handle cancelling a reservation
+  const handleCancelReservation = async (reservationId, e) => {
+    e.stopPropagation();
+    
+    if (!window.confirm("Are you sure you want to cancel this reservation?")) {
+      return;
+    }
+    
+    try {
+      setLoadingReservations(true);
+      
+      const token = TokenManager.getToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.post(
+        `http://127.0.0.1:8000/api/reservations/${reservationId}/cancel`,
+        {},
+        { headers }
+      );
+      
+      if (response.data.success) {
+        // Update the local reservations state to reflect the change
+        setReservations(reservations.map(reservation => {
+          if (reservation.reservation_id === reservationId) {
+            return { ...reservation, reservation_status: 'cancelled' };
+          }
+          return reservation;
+        }));
+        
+        alert("Reservation cancelled successfully");
+      } else {
+        alert(response.data.message || "Failed to cancel reservation");
+      }
+    } catch (error) {
+      console.error("Error cancelling reservation:", error);
+      alert("An error occurred while cancelling your reservation. Please try again.");
+    } finally {
+      setLoadingReservations(false);
+    }
+  };
+
   // Highlight an order when it's selected from a notification
   const highlightOrder = (orderId) => {
     console.log("Highlighting order:", orderId);
+    setActiveTab("orders");
 
     // Find the order element
     setTimeout(() => {
@@ -756,6 +845,8 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
         return "#17a2b8";
       case "cancelled":
         return "#dc3545";
+      case "pending":
+        return "#ffc107";
       default:
         return "#6c757d";
     }
@@ -795,6 +886,40 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       return new Date(dateString).toLocaleDateString(undefined, options);
     } catch (e) {
       return dateString;
+    }
+  };
+
+  // Format date without time
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "";
+
+    const options = {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    };
+
+    try {
+      return new Date(dateString).toLocaleDateString(undefined, options);
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  // Format time
+  const formatTime = (timeString) => {
+    if (!timeString) return "";
+
+    try {
+      // Parse time string (assuming format like "14:30:00")
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12; // Convert to 12-hour format
+      
+      return `${hour12}:${minutes} ${ampm}`;
+    } catch (e) {
+      return timeString;
     }
   };
 
@@ -844,7 +969,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
                 zIndex: 5,
               }}
             >
-              <h2 style={{ margin: 0, width: "500px" }}>Order History</h2>
+              <h2 style={{ margin: 0, width: "500px" }}>My History</h2>
               <button
                 onClick={toggleModalOrders}
                 style={{
@@ -861,49 +986,85 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div style={{ padding: "20px" }}>
-              {loading ? (
-                <div style={{ textAlign: "center", padding: "30px" }}>
-                  <FontAwesomeIcon icon={faSpinner} spin size="2x" />
-                  <p style={{ marginTop: "10px" }}>Loading your orders...</p>
-                </div>
-              ) : error ? (
-                <div
-                  style={{ textAlign: "center", padding: "30px", color: "red" }}
-                >
-                  <p>{error}</p>
-                  <button
-                    onClick={fetchOrders}
-                    style={{
-                      padding: "8px 16px",
-                      backgroundColor: "#ff8243",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      marginTop: "10px",
-                    }}
-                  >
-                    Try Again
-                  </button>
-                </div>
-              ) : orders.length === 0 ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "30px",
-                    color: "#666",
-                  }}
-                >
-                  <p>You don't have any orders yet.</p>
-                  <button
-                    onClick={() => {
-                      toggleModalOrders();
-                      // Scroll to menu section
+            {/* Tabs Navigation */}
+            <div style={{ 
+              display: 'flex', 
+              borderBottom: '1px solid #eee',
+              backgroundColor: '#f9f9f9',
+            }}>
+              <button 
+                onClick={() => setActiveTab("orders")}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: activeTab === "orders" ? 'bold' : 'normal',
+                  backgroundColor: activeTab === "orders" ? '#ff8243' : 'transparent',
+                  border: 'none',
+                  borderBottom: activeTab === "orders" ? '3px solid #ff8243' : 'none',
+                  cursor: 'pointer',
+                  
+                  color: activeTab === "orders" ? 'white' : '#333'
+                }}
+              >
+                <FontAwesomeIcon icon={faShoppingBag} style={{ marginRight: '8px' }} />
+                Orders
+              </button>
+              <button 
+                onClick={() => setActiveTab("reservations")}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: activeTab === "reservations" ? 'bold' : 'normal',
+                  backgroundColor: activeTab === "reservations" ? '#ff8243' : 'transparent',
+                  border: 'none',
+                  borderBottom: activeTab === "reservations" ? '3px solid #ff8243' : 'none',
+                  cursor: 'pointer',
+                  color: activeTab === "reservations" ? 'white' : '#333'
+                }}
+              >
+                <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: '8px' }} />
+                Reservations
+              </button>
+            </div>
+
+            {/* Orders Tab */}
+            {activeTab === "orders" && (
+              <div style={{ padding: "20px" }}>
+                {loading ? (
+                  <div style={{ textAlign: "center", padding: "30px" }}>
+                    <FontAwesomeIcon icon={faSpinner} spin size="2x" />
+                    <p style={{ marginTop: "10px" }}>Loading your orders...</p>
+                  </div>
+                ) : error ? (
+                  <div style={{ textAlign: "center", padding: "30px", color: "red" }}>
+                    <p>{error}</p>
+                    <button
+                      onClick={fetchOrders}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#ff8243",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        marginTop: "10px",
+                      }}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "30px", color: "#666" }}>
+                    <p>You don't have any orders yet.</p>
+                    <button
+                      onClick={() => {
+                        toggleModalOrders();
+                        // Scroll to menu section
                         document
-                        .getElementById("menu")
-                        ?.scrollIntoView({ behavior: "smooth" });
+                          .getElementById("menu")
+                          ?.scrollIntoView({ behavior: "smooth" });
                       }}
                       style={{
                         padding: "8px 16px",
@@ -914,139 +1075,295 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
                         cursor: "pointer",
                         marginTop: "10px",
                       }}
-                      >
+                    >
                       Order Now
-                      </button>
-                    </div>
-                    ) : (
-                    <div className="orders-list">
-                      {orders.map((order) => (
+                    </button>
+                  </div>
+                ) : (
+                  <div className="orders-list">
+                    {orders.map((order) => (
                       <div
                         key={order.order_id}
                         id={`order-${order.order_id}`}
                         style={{
-                        backgroundColor: "#f9f9f9",
-                        borderRadius: "8px",
-                        marginBottom: "15px",
-                        padding: "15px",
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                        transition: "all 0.3s ease",
-                        cursor: "pointer",
+                          backgroundColor: "#f9f9f9",
+                          borderRadius: "8px",
+                          marginBottom: "15px",
+                          padding: "15px",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                          transition: "all 0.3s ease",
+                          cursor: "pointer",
                         }}
-                        onClick={() => {                       
-                          handleViewDetails(order);
-                        }
-                        }
+                        onClick={() => handleViewDetails(order)}
                       >
                         <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                        >
-                        <div
-                          style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
-                          }}
-                        >
-                          <div
-                          style={{
-                            backgroundColor: getStatusColor(order.status),
-                            width: "36px",
-                            height: "36px",
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "white",
-                          }}
-                          >
-                          <FontAwesomeIcon
-                            icon={getStatusIcon(order.status)}
-                          />
-                          </div>
-
-                          <div>
-                          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>
-                            Order #{order.order_id}
-                          </h3>
-                          <div
-                            style={{
-                            fontSize: "0.85rem",
-                            color: "#666",
-                            marginTop: "2px",
-                            }}
-                          >
-                            {formatDate(order.created_at)}
-                          </div>
-                          </div>
-                        </div>
-
-                        <div style={{ textAlign: "right" }}>
-                          <div
-                          style={{
-                            fontSize: "1rem",
-                            fontWeight: "600",
-                            marginBottom: "5px",
-                          }}
-                          >
-                          ₱{parseFloat(order.total_price || 0).toFixed(2)}
-                          </div>
-                          <div
                           style={{
                             display: "flex",
-                            gap: "10px",
+                            justifyContent: "space-between",
                             alignItems: "center",
                           }}
-                          >
-                          <div
-                            style={{
-                            textTransform: "uppercase",
-                            fontSize: "0.7rem",
-                            fontWeight: "bold",
-                            padding: "3px 8px",
-                            borderRadius: "4px",
-                            display: "inline-block",
-                            backgroundColor: getStatusColor(order.status),
-                            color: "white",
-                            }}
-                          >
-                            {order.status || "pending"}
-                          </div>
-
-                          {(!order.status ||
-                            order.status.toLowerCase() === "pending" ||
-                            order.status.toLowerCase() === "processing") && (
-                            <button
-                            onClick={(e) => handleCancelOrder(order.order_id, e)}
-                            style={{
-                              padding: "3px 8px",
-                              backgroundColor: "#dc3545",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              fontSize: "0.7rem",
-                              fontWeight: "bold",
-                              marginTop: "10px",
-                            }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div
+                              style={{
+                                backgroundColor: getStatusColor(order.status),
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "white",
+                              }}
                             >
-                            CANCEL
-                            </button>
-                          )}
+                              <FontAwesomeIcon icon={getStatusIcon(order.status)} />
+                            </div>
+
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: "1.05rem" }}>
+                                Order #{order.order_id}
+                              </h3>
+                              <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "2px" }}>
+                                {formatDate(order.created_at)}
+                              </div>
+                            </div>
                           </div>
-                        </div>
+
+                          <div style={{ textAlign: "right" }}>
+                            <div
+                              style={{
+                                fontSize: "1rem",
+                                fontWeight: "600",
+                                marginBottom: "5px",
+                              }}
+                            >
+                              ₱{parseFloat(order.total_price || 0).toFixed(2)}
+                            </div>
+                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                              <div
+                                style={{
+                                  textTransform: "uppercase",
+                                  fontSize: "0.7rem",
+                                  fontWeight: "bold",
+                                  padding: "3px 8px",
+                                  borderRadius: "4px",
+                                  display: "inline-block",
+                                  backgroundColor: getStatusColor(order.status),
+                                  color: "white",
+                                }}
+                              >
+                                {order.status || "pending"}
+                              </div>
+
+                              {(!order.status ||
+                                order.status.toLowerCase() === "pending" ||
+                                order.status.toLowerCase() === "processing") && (
+                                <button
+                                  onClick={(e) => handleCancelOrder(order.order_id, e)}
+                                  style={{
+                                    padding: "3px 8px",
+                                    backgroundColor: "#dc3545",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "0.7rem",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  CANCEL
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      ))}
-                    </div>
-                    )}
+                    ))}
                   </div>
+                )}
+              </div>
+            )}
 
-                  
+            {/* Reservations Tab */}
+            {activeTab === "reservations" && (
+              <div style={{ padding: "20px" }}>
+                {loadingReservations ? (
+                  <div style={{ textAlign: "center", padding: "30px" }}>
+                    <FontAwesomeIcon icon={faSpinner} spin size="2x" />
+                    <p style={{ marginTop: "10px" }}>Loading your reservations...</p>
+                  </div>
+                ) : reservationError ? (
+                  <div style={{ textAlign: "center", padding: "30px", color: "red" }}>
+                    <p>{reservationError}</p>
+                    <button
+                      onClick={fetchReservations}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#ff8243",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        marginTop: "10px",
+                      }}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : reservations.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "30px", color: "#666" }}>
+                    <p>You don't have any reservations yet.</p>
+                    <button
+                      onClick={() => {
+                        toggleModalOrders();
+                        // Scroll to reservation section
+                        document
+                          .getElementById("reservation")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#ff8243",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        marginTop: "10px",
+                      }}
+                    >
+                      Book a Table
+                    </button>
+                  </div>
+                ) : (
+                  <div className="reservations-list">
+                    {reservations.map((reservation) => (
+                      <div
+                        key={reservation.reservation_id}
+                        id={`reservation-${reservation.reservation_id}`}
+                        style={{
+                          backgroundColor: "#f9f9f9",
+                          borderRadius: "8px",
+                          marginBottom: "15px",
+                          padding: "15px",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                          transition: "all 0.3s ease",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div
+                              style={{
+                                backgroundColor: getStatusColor(reservation.reservation_status),
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "white",
+                              }}
+                            >
+                              <FontAwesomeIcon icon={faCalendarAlt} />
+                            </div>
+
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: "1.05rem" }}>
+                                Reservation #{reservation.reservation_id}
+                              </h3>
+                              <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "2px" }}>
+                                Booked on: {formatDate(reservation.created_at)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                              <div
+                                style={{
+                                  textTransform: "uppercase",
+                                  fontSize: "0.7rem",
+                                  fontWeight: "bold",
+                                  padding: "3px 8px",
+                                  borderRadius: "4px",
+                                  display: "inline-block",
+                                  backgroundColor: getStatusColor(reservation.reservation_status),
+                                  color: "white",
+                                }}
+                              >
+                                {reservation.reservation_status || "pending"}
+                              </div>
+
+                              {(reservation.reservation_status === "pending") && (
+                                <button
+                                  onClick={(e) => handleCancelReservation(reservation.reservation_id, e)}
+                                  style={{
+                                    padding: "3px 8px",
+                                    backgroundColor: "#dc3545",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "0.7rem",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  CANCEL
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Reservation Details */}
+                        <div
+                          style={{
+                            marginTop: "12px",
+                            backgroundColor: "white",
+                            borderRadius: "6px",
+                            padding: "10px",
+                            display: "grid",
+                            gridTemplateColumns: "repeat(3, 1fr)",
+                            gap: "10px",
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: "0.8rem", color: "#666" }}>Date</div>
+                            <div style={{ fontWeight: "500", display: "flex", alignItems: "center", gap: "5px" }}>
+                              <FontAwesomeIcon icon={faCalendarAlt} style={{ color: "#ff8243" }} />
+                              {formatDateOnly(reservation.reservation_date)}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.8rem", color: "#666" }}>Time</div>
+                            <div style={{ fontWeight: "500", display: "flex", alignItems: "center", gap: "5px" }}>
+                              <FontAwesomeIcon icon={faClock} style={{ color: "#ff8243" }} />
+                              {formatTime(reservation.reservation_time)}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.8rem", color: "#666" }}>Guests</div>
+                            <div style={{ fontWeight: "500", display: "flex", alignItems: "center", gap: "5px" }}>
+                              <FontAwesomeIcon icon={reservation.reservation_people > 1 ? faUsers : faUser} style={{ color: "#ff8243" }} />
+                              {reservation.reservation_people} {reservation.reservation_people > 1 ? 'People' : 'Person'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Modal Footer */}
             <div
               style={{
                 padding: "15px 20px",

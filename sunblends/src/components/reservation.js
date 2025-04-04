@@ -30,8 +30,11 @@ const BookingTable = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasNewNotification, setHasNewNotification] = useState(false);
   const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
-  const [isNotificationCenterOpen, setIsNotificationCenterOpen] =
-    useState(false);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [pendingReservation, setPendingReservation] = useState(null);
 
   // API URL
   const API_BASE_URL = "http://127.0.0.1:8000/api";
@@ -605,7 +608,7 @@ const BookingTable = () => {
   }, []);
 
   // Handle reservation submission
-  const handleReservation = async () => {
+  const handleReservation = () => {
     // Reset status message
     setReservationStatus({ message: "", success: null });
     
@@ -624,6 +627,12 @@ const BookingTable = () => {
       return;
     }
     
+    // If all checks pass, show terms agreement modal
+    setShowTermsModal(true);
+  };
+
+  // Handle actual reservation submission after terms agreement
+  const processReservation = async () => {
     // Extract number of people from selection
     const peopleCount = parseInt(person.split(' ')[0]);
     
@@ -635,7 +644,8 @@ const BookingTable = () => {
         reservation_date: date,
         reservation_time: time,
         reservation_people: peopleCount,
-        order_id: null // Can be linked to an order if needed
+        order_id: null, // Can be linked to an order if needed
+        terms_agreed: true // Add this to track agreement in your database
       }, {
         headers: {
           'Accept': 'application/json',
@@ -653,8 +663,7 @@ const BookingTable = () => {
         setPerson("1 Person");
         setDate("");
         setTime("");
-        
-       
+        setTermsAgreed(true);
       } else {
         setReservationStatus({
           message: response.data.message || "Failed to create reservation",
@@ -678,7 +687,129 @@ const BookingTable = () => {
       }
     } finally {
       setIsLoading(false);
+      setShowTermsModal(false); // Close the modal
     }
+  };
+  
+  // Handle agreement action
+  const handleAgreeTerms = () => {
+    processReservation();
+  };
+  
+  // Handle closing the terms modal without agreement
+  const handleCloseTermsModal = () => {
+    setShowTermsModal(false);
+    // Don't process the reservation if they close without agreeing
+  };
+
+  const TermsAgreementModal = ({ isOpen, onClose, onAgree, isLoading }) => {
+    if (!isOpen) return null;
+  
+    return (
+      <div className="modal-overlay" style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        zIndex: 9999,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <div className="modal-content" style={{
+          backgroundColor: 'white',
+          padding: '25px',
+          borderRadius: '8px',
+          maxWidth: '600px',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+
+        }}>
+          <div className="modal-header" style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '15px'
+          }}>
+            <h3 style={{ margin: 0, color: '#333', fontSize: '1.4rem' }}>Terms of Agreement for Reservation</h3>
+            <button onClick={onClose} style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: 'pointer'
+            }}>✕</button>
+          </div>
+          
+          <div className="modal-body" style={{ lineHeight: '1.6', color: '#555' }}>
+            <p>By making a reservation with Cafe XYZ, you agree to the following terms and conditions:</p>
+            
+            <h4 style={{ marginTop: '20px', marginBottom: '10px', color: '#333' }}>Reservation Confirmation</h4>
+            <p>A successful reservation ensures that your selected time slot is secured, subject to compliance with the terms outlined below.</p>
+            
+            <h4 style={{ marginTop: '20px', marginBottom: '10px', color: '#333' }}>Grace Period</h4>
+            <p>Reserved tables will be held for 15 minutes from the scheduled reservation time. If the customer fails to arrive within this period, the reservation may be canceled or given to other waiting customers.</p>
+            
+            <h4 style={{ marginTop: '20px', marginBottom: '10px', color: '#333' }}>Cancellations & Modifications</h4>
+            <p>Customers may modify or cancel their reservation at least [timeframe] before the scheduled time, subject to availability.</p>
+            
+            <h4 style={{ marginTop: '20px', marginBottom: '10px', color: '#333' }}>Arrival & Seating</h4>
+            <p>Reserved seating will be assigned based on availability and restaurant discretion. Special requests will be accommodated when possible but are not guaranteed.</p>
+            
+            <h4 style={{ marginTop: '20px', marginBottom: '10px', color: '#333' }}>Minimum Order & Duration</h4>
+            <p>Some reservations may require a minimum order or have time limits during peak hours to accommodate all guests fairly.</p>
+            
+            <h4 style={{ marginTop: '20px', marginBottom: '10px', color: '#333' }}>No-Show Policy</h4>
+            <p>Repeated no-shows or late arrivals may result in restrictions on future reservations.</p>
+            
+            <h4 style={{ marginTop: '20px', marginBottom: '10px', color: '#333' }}>House Rules</h4>
+            <p>Customers are expected to follow Cafe XYZ's policies, including dining time limits, table-sharing policies, and general courtesy to other guests and staff.</p>
+            
+            <p style={{ marginTop: '20px', fontWeight: 'bold' }}>By proceeding with your reservation, you acknowledge and agree to these terms. Failure to comply may result in the cancellation of the booking or restrictions on future reservations.</p>
+          </div>
+          
+          <div className="modal-footer" style={{
+            marginTop: '25px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            borderTop: '1px solid #eee',
+            paddingTop: '15px'
+          }}>
+            <button 
+              onClick={onClose}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: '#b85454',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Decline
+            </button>
+            <button 
+              onClick={onAgree}
+              disabled={isLoading}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#f3a333',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              {isLoading ? "Processing..." : "I Agree"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -695,7 +826,8 @@ const BookingTable = () => {
               <div className={`alert ${reservationStatus.success ? 'alert-success' : 'alert-danger'}`}
                    style={{ 
                      padding: '10px', 
-                     marginBottom: '15px', 
+                     marginBottom: '15px',
+
                      borderRadius: '4px',
                      backgroundColor: reservationStatus.success ? '#d4edda' : '#f8d7da',
                      color: reservationStatus.success ? '#155724' : '#721c24'
@@ -799,6 +931,14 @@ const BookingTable = () => {
           </div>
         </div>
       </section>
+      
+      {/* Terms Agreement Modal */}
+      <TermsAgreementModal
+        isOpen={showTermsModal}
+        onClose={handleCloseTermsModal}
+        onAgree={handleAgreeTerms}
+        isLoading={isLoading}
+      />
     </>
   );
 };

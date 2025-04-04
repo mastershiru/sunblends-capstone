@@ -117,6 +117,11 @@ class EmployeeLogin extends Component
         
         $this->isOpen = false;
         $this->reset(['email', 'password']);
+
+        activity()
+        ->causedBy($employee)
+        ->withProperties(['ip_address' => request()->ip()])
+        ->log('employee logged in');
         
         // Determine redirect based on role
         $redirectTo = '/dashboard';
