@@ -8,6 +8,8 @@ import "../../assets/css/modal.css";
 import axios from "axios";
 import Forgotpassword from "./forgot.password";
 import TokenManager from '../../utils/tokenManager'; // Import the token manager
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Login({
   isOpenLogin,
@@ -109,7 +111,16 @@ function Login({
         { withCredentials: true }
       )
       .then((response) => {
-        alert("Logged in with Google successfully.");
+        // Order successful
+                toast.success("Logged In successfully!", {
+                  position: "top-right",
+                  autoClose: 2000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                  progress: undefined,
+                });
         
         // Store token securely with TokenManager
         if (response.data.token) {
@@ -164,7 +175,7 @@ function Login({
               <h2>Log In</h2>
 
               <form onSubmit={handleSubmit}>
-                <div className="form-element">
+                {/* <div className="form-element">
                   <label htmlFor="email">Email</label>
                   <input
                     className="email"
@@ -189,8 +200,8 @@ function Login({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                </div>
-                <div className="form-element">
+                </div> */}
+                {/* <div className="form-element">
                   <button
                     className="forgot-password"
                     type="button"
@@ -198,27 +209,16 @@ function Login({
                   >
                     Forgot password?
                   </button>
-                </div>
+                </div> */}
                 <div className="form-element">
-                  <button
+                  {/* <button
                     type="submit"
                     id="signin-button"
                     style={{ marginBottom: "0" }}
                   >
                     Sign In
-                  </button>
-                  <div className="form-element">
-                    <button
-                      type="button"
-                      id="employee-login"
-                      onClick={() =>
-                        (window.location.href =
-                          "http://127.0.0.1:8000/employee/login")
-                      }
-                    >
-                      Employee Login
-                    </button>
-                  </div>
+                  </button> */}
+
                   <div
                     className="google-login"
                     style={{
@@ -233,7 +233,19 @@ function Login({
                     />
                   </div>
                 </div>
-                <p className="no-account">
+                <div className="form-element">
+                  <button
+                    type="button"
+                    id="employee-login"
+                    onClick={() =>
+                      (window.location.href =
+                        "http://127.0.0.1:8000/employee/login")
+                    }
+                  >
+                    Employee Login
+                  </button>
+                </div>
+                {/* <p className="no-account">
                   Don't have an account?{" "}
                   <button
                     id="signup-btn"
@@ -245,7 +257,7 @@ function Login({
                   >
                     Sign Up
                   </button>
-                </p>
+                </p> */}
               </form>
             </div>
           </div>

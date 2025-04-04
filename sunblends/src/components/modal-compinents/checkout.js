@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faXmark, faClock } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronLeft,
+  faXmark,
+  faClock,
+} from "@fortawesome/free-solid-svg-icons";
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import "../../assets/css/modal.css";
 import axios from "axios";
 
@@ -27,46 +33,50 @@ const Checkout = ({
     const checkOperatingHours = () => {
       // Get fresh time data each check, don't rely on cached Date objects
       const now = new Date();
-      
+
       // Force Date to get current time from system by recreating it
       now.setTime(Date.now());
-      
+
       const hour = now.getHours();
       const minutes = now.getMinutes();
-      
+
       // Operating hours: 8:00 AM (8:00) to 5:00 PM (17:00)
       // Convert to minutes for easier comparison
       const currentTimeInMinutes = hour * 60 + minutes;
-      const openingTimeInMinutes = 8 * 60; // 8:00 AM
+      const openingTimeInMinutes = 5 * 60; // 5:00 AM
       const closingTimeInMinutes = 17 * 60; // 5:00 PM
-      
+
       // Within operating hours if current time is >= opening and < closing
-      const isOpen = currentTimeInMinutes >= openingTimeInMinutes && 
-                     currentTimeInMinutes < closingTimeInMinutes;
-                     
+      const isOpen =
+        currentTimeInMinutes >= openingTimeInMinutes &&
+        currentTimeInMinutes < closingTimeInMinutes;
+
       // Update state with current status
       setIsWithinOperatingHours(isOpen);
-      
+
       // Log for debugging with timestamp to verify it's using current time
-      console.log(`Check time: ${now.toLocaleTimeString()}, Hours: ${hour}, Minutes: ${minutes}, Status: ${isOpen ? 'Open' : 'Closed'}`);
+      console.log(
+        `Check time: ${now.toLocaleTimeString()}, Hours: ${hour}, Minutes: ${minutes}, Status: ${
+          isOpen ? "Open" : "Closed"
+        }`
+      );
     };
-  
+
     // Check immediately when component mounts
     checkOperatingHours();
-  
+
     // Check again whenever the modal is opened
     if (isOpenCheckout) {
       checkOperatingHours();
     }
-  
+
     // Set up interval to check more frequently (every 15 seconds)
     // This helps catch system time changes more quickly
     const intervalId = setInterval(checkOperatingHours, 15000);
-  
+
     // Clean up interval on unmount
     return () => clearInterval(intervalId);
-  }, [isOpenCheckout]); 
-
+  }, [isOpenCheckout]);
 
   // Fetch user data when component mounts
   useEffect(() => {
@@ -107,7 +117,9 @@ const Checkout = ({
     setError(null);
 
     if (!isWithinOperatingHours) {
-      setError("Sorry, we're closed. Our operating hours are 8:00 AM to 5:00 PM.");
+      setError(
+        "Sorry, we're closed. Our operating hours are 8:00 AM to 5:00 PM."
+      );
       return false;
     }
 
@@ -126,7 +138,10 @@ const Checkout = ({
       return false;
     }
 
-    if (paymentMethod === "Cash" && (!cashAmount || parseFloat(cashAmount) < totalAmount)) {
+    if (
+      paymentMethod === "Cash" &&
+      (!cashAmount || parseFloat(cashAmount) < totalAmount)
+    ) {
       setError("Cash amount must be equal to or greater than the total amount");
       return false;
     }
@@ -136,27 +151,28 @@ const Checkout = ({
 
   const handleCheckout = async () => {
     if (!validateForm()) return;
-  
+
     const email = localStorage.getItem("email");
     if (!email) {
       setError("You must be logged in to place an order");
       return;
     }
-  
+
     setIsLoading(true);
     setError(null);
-  
+
     // Calculate change amount if paying with cash
-    const changeAmount = paymentMethod === "Cash" && cashAmount 
-      ? parseFloat(cashAmount) - totalAmount 
-      : 0;
-  
+    const changeAmount =
+      paymentMethod === "Cash" && cashAmount
+        ? parseFloat(cashAmount) - totalAmount
+        : 0;
+
     try {
       // First make sure we have a CSRF token
       await axios.get("http://127.0.0.1:8000/sanctum/csrf-cookie", {
         withCredentials: true,
       });
-  
+
       // Place the order through our API
       const response = await axios.post(
         "http://127.0.0.1:8000/api/checkout",
@@ -167,7 +183,7 @@ const Checkout = ({
           totalAmount,
           notes: deliveryMethod === "delivery" ? notes : null,
           cashAmount: paymentMethod === "Cash" ? parseFloat(cashAmount) : 0,
-          changeAmount: changeAmount,  // Add the calculated change amount
+          changeAmount: changeAmount, // Add the calculated change amount
         },
         {
           withCredentials: true,
@@ -177,10 +193,18 @@ const Checkout = ({
           },
         }
       );
-  
+
       if (response.data.success) {
         // Order successful
-        alert("Order placed successfully!");
+        toast.success("Order placed successfully!", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
         setIsOpenCheckout(false);
         setNotes("");
         setPaymentMethod("");
@@ -228,20 +252,27 @@ const Checkout = ({
 
               {/* Operating Hours Banner */}
               {!isWithinOperatingHours && (
-                <div className="operating-hours-warning" style={{
-                  background: "#fff3cd",
-                  color: "#856404",
-                  padding: "10px",
-                  borderRadius: "5px",
-                  marginBottom: "15px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "14px"
-                }}>
-                  <FontAwesomeIcon icon={faClock} style={{ marginRight: "8px" }} />
+                <div
+                  className="operating-hours-warning"
+                  style={{
+                    background: "#fff3cd",
+                    color: "#856404",
+                    padding: "10px",
+                    borderRadius: "5px",
+                    marginBottom: "15px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px",
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={faClock}
+                    style={{ marginRight: "8px" }}
+                  />
                   <span>
-                    <strong>We're currently closed.</strong> Our operating hours are 8:00 AM to 5:00 PM.
+                    <strong>We're currently closed.</strong> Our operating hours
+                    are 8:00 AM to 5:00 PM.
                   </span>
                 </div>
               )}
@@ -322,11 +353,17 @@ const Checkout = ({
                         GCash
                       </label>
                     </div>
-                    
+
                     {/* Cash Amount Input Field */}
                     {paymentMethod === "Cash" && (
-                      <div className="cash-amount-input" style={{ marginTop: "10px" }}>
-                        <label htmlFor="cash-amount" style={{ fontSize: "12px", display: "block" }}>
+                      <div
+                        className="cash-amount-input"
+                        style={{ marginTop: "10px" }}
+                      >
+                        <label
+                          htmlFor="cash-amount"
+                          style={{ fontSize: "12px", display: "block" }}
+                        >
                           Cash Amount:
                         </label>
                         <input
@@ -338,11 +375,11 @@ const Checkout = ({
                           onChange={(e) => setCashAmount(e.target.value)}
                           min={totalAmount}
                           required
-                          style={{ 
-                            width: "100%", 
-                            padding: "8px", 
+                          style={{
+                            width: "100%",
+                            padding: "8px",
                             marginTop: "4px",
-                            fontSize: "14px" 
+                            fontSize: "14px",
                           }}
                         />
                       </div>
@@ -364,13 +401,22 @@ const Checkout = ({
                       <p style={{ margin: "0" }}>
                         <b>Total:</b> <span>₱{totalAmount.toFixed(2)}</span>
                       </p>
-                      
+
                       {/* Display Change Amount */}
-                      {paymentMethod === "Cash" && cashAmount && parseFloat(cashAmount) >= totalAmount && (
-                        <p style={{ margin: "5px 0 0 0", fontSize: "14px", color: "green" }}>
-                          Change: ₱{(parseFloat(cashAmount) - totalAmount).toFixed(2)}
-                        </p>
-                      )}
+                      {paymentMethod === "Cash" &&
+                        cashAmount &&
+                        parseFloat(cashAmount) >= totalAmount && (
+                          <p
+                            style={{
+                              margin: "5px 0 0 0",
+                              fontSize: "14px",
+                              color: "green",
+                            }}
+                          >
+                            Change: ₱
+                            {(parseFloat(cashAmount) - totalAmount).toFixed(2)}
+                          </p>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -408,31 +454,37 @@ const Checkout = ({
                   </div>
 
                   <div className="col">
-                  <button
-                    className="checkout-button"
-                    onClick={handleCheckout}
-                    disabled={isLoading || !isWithinOperatingHours}
-                    style={{
-                      opacity: (!isWithinOperatingHours) ? 0.5 : 1,
-                      cursor: (!isWithinOperatingHours) ? 'not-allowed' : 'pointer',
-                      backgroundColor: (!isWithinOperatingHours) ? '#cccccc' : '#ff8243',
-                    }}
-                  >
-                    {isLoading ? "Processing..." : "Place Order"}
-                  </button>
+                    <button
+                      className="checkout-button"
+                      onClick={handleCheckout}
+                      disabled={isLoading || !isWithinOperatingHours}
+                      style={{
+                        opacity: !isWithinOperatingHours ? 0.5 : 1,
+                        cursor: !isWithinOperatingHours
+                          ? "not-allowed"
+                          : "pointer",
+                        backgroundColor: !isWithinOperatingHours
+                          ? "#cccccc"
+                          : "#ff8243",
+                      }}
+                    >
+                      {isLoading ? "Processing..." : "Place Order"}
+                    </button>
 
-                  {/* Operating hours hint text */}
-                  {!isWithinOperatingHours && (
-                    <p style={{ 
-                      fontSize: "12px", 
-                      color: "#842029",  // Darker red text 
-                      textAlign: "center",
-                      marginTop: "5px",
-                      fontWeight: "500"
-                    }}>
-                      Orders can be placed between 8:00 AM and 5:00 PM
-                    </p>
-                  )}
+                    {/* Operating hours hint text */}
+                    {!isWithinOperatingHours && (
+                      <p
+                        style={{
+                          fontSize: "12px",
+                          color: "#842029", // Darker red text
+                          textAlign: "center",
+                          marginTop: "5px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Orders can be placed between 8:00 AM and 5:00 PM
+                      </p>
+                    )}
                   </div>
                 </div>
 

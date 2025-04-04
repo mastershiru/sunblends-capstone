@@ -5,6 +5,8 @@ import axios from "axios";
 import titleshape from "../assets/images/title-shape.svg";
 import imagebg from "../assets/images/menu-bg.png";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const MenuSection = ({ addToCartNumber, addToCart }) => {
   const [menuItems, setMenuItems] = useState([]);
@@ -110,6 +112,10 @@ const MenuSection = ({ addToCartNumber, addToCart }) => {
       });
 
       addToCartNumber();
+
+      
+      
+      toast.success(`${dish.Dish_Title} added to cart!`);
     } catch (error) {
       console.error("Error adding item to cart:", error);
       alert("Failed to add item to cart. Please try again.");
@@ -177,7 +183,7 @@ const MenuSection = ({ addToCartNumber, addToCart }) => {
           <p>{dish.Dish_Type}</p>
         </div>
         <div className="dish-info">
-          <ul>
+          {/* <ul>
             <li>
               <p>Type</p>
               <b>{dish.Dish_Type}</b>
@@ -186,7 +192,7 @@ const MenuSection = ({ addToCartNumber, addToCart }) => {
               <p>Persons</p>
               <b>{dish.Dish_Persons || 1}</b>
             </li>
-          </ul>
+          </ul> */}
         </div>
         <div className="dist-bottom-row">
           <ul>
@@ -278,142 +284,187 @@ const MenuSection = ({ addToCartNumber, addToCart }) => {
   }
 
   return (
-    <section
-      className="our-menu section bg-light repeat-img"
-      id="menu"
-      style={{ backgroundImage: `url(${imagebg})` }}
-    >
-      <div className="sec-wp">
-        <div className="container">
-          <div className="row">
-            <div className="col-lg-12">
-              <div className="sec-title text-center mb-5">
-                <p className="sec-sub-title mb-3">our menu</p>
-                <h2 className="h2-title">
-                  wake up early, <span>eat fresh & healthy</span>
-                </h2>
-                <div className="sec-title-shape mb-4">
-                  <img src={titleshape} alt="" />
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        closeButton={false}
+        hideProgressBar={false}
+        newestOnTop={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        style={{ marginTop: "60px" }}
+      />
+      <section
+        className="our-menu section bg-light repeat-img"
+        id="menu"
+        style={{ backgroundImage: `url(${imagebg})` }}
+      >
+        <div className="sec-wp">
+          <div className="container">
+            <div className="row">
+              <div className="col-lg-12">
+                <div className="sec-title text-center mb-5">
+                  <p className="sec-sub-title mb-3">our menu</p>
+                  <h2 className="h2-title">
+                    wake up early, <span>eat fresh & healthy</span>
+                  </h2>
+                  <div className="sec-title-shape mb-4">
+                    <img src={titleshape} alt="" />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* TWO SEPARATE SECTIONS APPROACH */}
-          {hasBothCategories ? (
-            <>
-              {/* MOST ORDERED SECTION */}
-              {limitedMostOrdered.length > 0 && (
-                <>
-                  <div className="best-selling-tab-wp">
-                    <div className="row">
-                      <div className="col-lg-12 m-auto">
-                        <div className="best-selling-tab text-center">
-                          <FontAwesomeIcon icon={faFireFlameCurved} style={{ color: "#ff8243", marginRight: "10px" }} />
-                          MOST ORDERED
+            {/* TWO SEPARATE SECTIONS APPROACH */}
+            {hasBothCategories ? (
+              <>
+                {/* MOST ORDERED SECTION */}
+                {limitedMostOrdered.length > 0 && (
+                  <>
+                    <div className="best-selling-tab-wp">
+                      <div className="row">
+                        <div className="col-lg-12 m-auto">
+                          <div className="best-selling-tab text-center">
+                            <FontAwesomeIcon
+                              icon={faFireFlameCurved}
+                              style={{ color: "#ff8243", marginRight: "10px" }}
+                            />
+                            MOST ORDERED
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="menu-list-row">
-                    <div className="row g-xxl-5 bydefault_show" id="most-ordered-dishes">
-                      {limitedMostOrdered.map(dish => renderDishCard(dish))}
+                    <div className="menu-list-row">
+                      <div
+                        className="row g-xxl-5 bydefault_show"
+                        id="most-ordered-dishes"
+                      >
+                        {limitedMostOrdered.map((dish) => renderDishCard(dish))}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
 
-              {/* HIGHEST RATED SECTION */}
-              {limitedHighestRated.length > 0 && (
-                <>
-                  <div className="best-selling-tab-wp mt-5">
-                    <div className="row">
-                      <div className="col-lg-12 m-auto">
-                        <div className="best-selling-tab text-center highest-rated-tab">
-                          <FontAwesomeIcon icon={faAward} style={{ color: "#4a6ac8", marginRight: "10px" }} />
-                          TOP RATED
+                {/* HIGHEST RATED SECTION */}
+                {limitedHighestRated.length > 0 && (
+                  <>
+                    <div className="best-selling-tab-wp mt-5">
+                      <div className="row">
+                        <div className="col-lg-12 m-auto">
+                          <div className="best-selling-tab text-center highest-rated-tab">
+                            <FontAwesomeIcon
+                              icon={faAward}
+                              style={{ color: "#4a6ac8", marginRight: "10px" }}
+                            />
+                            TOP RATED
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="menu-list-row">
-                    <div className="row g-xxl-5 bydefault_show" id="highest-rated-dishes">
-                      {limitedHighestRated.map(dish => renderDishCard(dish))}
+                    <div className="menu-list-row">
+                      <div
+                        className="row g-xxl-5 bydefault_show"
+                        id="highest-rated-dishes"
+                      >
+                        {limitedHighestRated.map((dish) =>
+                          renderDishCard(dish)
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            /* SINGLE COMBINED SECTION APPROACH (when we don't have enough of both categories) */
-            <>
-              {(featuredItems.length > 0 || fallbackItems.length > 0) && (
-                <>
-                  <div className="best-selling-tab-wp">
-                    <div className="row">
-                      <div className="col-lg-12 m-auto">
-                        <div className="best-selling-tab text-center">
-                          <FontAwesomeIcon icon={faFireFlameCurved} style={{ color: "#ff8243", marginRight: "10px" }} />
-                          FEATURED DISHES
+                  </>
+                )}
+              </>
+            ) : (
+              /* SINGLE COMBINED SECTION APPROACH (when we don't have enough of both categories) */
+              <>
+                {(featuredItems.length > 0 || fallbackItems.length > 0) && (
+                  <>
+                    <div className="best-selling-tab-wp">
+                      <div className="row">
+                        <div className="col-lg-12 m-auto">
+                          <div className="best-selling-tab text-center">
+                            <FontAwesomeIcon
+                              icon={faFireFlameCurved}
+                              style={{ color: "#ff8243", marginRight: "10px" }}
+                            />
+                            FEATURED DISHES
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="menu-list-row">
-                    <div className="row g-xxl-5 bydefault_show" id="menu-dish">
-                      {displayItems.map(dish => renderDishCard(dish))}
+                    <div className="menu-list-row">
+                      <div
+                        className="row g-xxl-5 bydefault_show"
+                        id="menu-dish"
+                      >
+                        {displayItems.map((dish) => renderDishCard(dish))}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </>
-          )}
+                  </>
+                )}
+              </>
+            )}
 
-          {/* No items available message */}
-          {((hasBothCategories && limitedMostOrdered.length === 0 && limitedHighestRated.length === 0) 
-            || (!hasBothCategories && displayItems.length === 0)) && (
-            <div className="col-12 text-center py-4">
-              <p>No menu items available right now. Check back soon!</p>
+            {/* No items available message */}
+            {((hasBothCategories &&
+              limitedMostOrdered.length === 0 &&
+              limitedHighestRated.length === 0) ||
+              (!hasBothCategories && displayItems.length === 0)) && (
+              <div className="col-12 text-center py-4">
+                <p>No menu items available right now. Check back soon!</p>
+              </div>
+            )}
+
+            <div className="text-center mt-4">
+              <button
+                className="more-menu"
+                onClick={() => navigate("/allMenu")}
+              >
+                View All Menu
+              </button>
             </div>
-          )}
-
-          <div className="text-center mt-4">
-            <button className="more-menu" onClick={() => navigate("/allMenu")}>
-              View All Menu
-            </button>
           </div>
         </div>
-      </div>
-      
-      {/* Admin tools for refreshing ratings */}
-      {localStorage.getItem('isAdmin') === 'true' && (
-        <div className="admin-tools" style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000 }}>
-          <button 
-            className="btn btn-sm btn-primary"
-            onClick={() => {
-              // Call the refresh API
-              axios.get(`${API_BASE_URL}/refresh-all-dish-ratings`)
-                .then(response => {
-                  alert(`Ratings refreshed: ${response.data.message}`);
-                  // Reload the page with refresh=true
-                  window.location.href = `${window.location.pathname}?refresh=true`;
-                })
-                .catch(err => {
-                  console.error("Error refreshing ratings:", err);
-                  alert("Failed to refresh ratings");
-                });
+
+        {/* Admin tools for refreshing ratings */}
+        {localStorage.getItem("isAdmin") === "true" && (
+          <div
+            className="admin-tools"
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              right: "20px",
+              zIndex: 1000,
             }}
           >
-            Refresh Ratings
-          </button>
-        </div>
-      )}
-      
-      
-    </section>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                // Call the refresh API
+                axios
+                  .get(`${API_BASE_URL}/refresh-all-dish-ratings`)
+                  .then((response) => {
+                    alert(`Ratings refreshed: ${response.data.message}`);
+                    // Reload the page with refresh=true
+                    window.location.href = `${window.location.pathname}?refresh=true`;
+                  })
+                  .catch((err) => {
+                    console.error("Error refreshing ratings:", err);
+                    alert("Failed to refresh ratings");
+                  });
+              }}
+            >
+              Refresh Ratings
+            </button>
+          </div>
+        )}
+      </section>
+    </>
   );
 };
 

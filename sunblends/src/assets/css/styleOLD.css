@@ -1037,6 +1037,7 @@ ul {
     font-size: 15px;
     text-align: left;
     width: 200px;
+    padding-top: 100px m !important;
   }
   .dish-info {
     padding: 0;

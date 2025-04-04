@@ -241,9 +241,9 @@ const Navbar = () => {
                   <button id="show-login" onClick={toggleModalLogin}>
                     Login
                   </button>
-                  <button id="show-register" onClick={toggleModalRegister}>
+                  {/* <button id="show-register" onClick={toggleModalRegister}>
                     Register
-                  </button>
+                  </button> */}
                 </>
               )}
             </div>
@@ -341,7 +341,10 @@ const Navbar = () => {
               <button
                 className=""
                 id="show-cart"
-                onClick={toggleModalCart}
+                onClick={() => {
+                  toggleModalCart();
+                  toggleNavbar();
+                }}
                 style={{
                   border: "none",
                   color: "#6E6E6E",

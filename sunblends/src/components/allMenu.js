@@ -17,6 +17,8 @@ import NotificationsCenter from "./modal-compinents/notification-center";
 import NotificationManager from "./notifications/Notification-manager";
 import { useNavbar } from "../context/NavbarContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
 
 const AllMenu = () => {
   const [menuItems, setMenuItems] = useState([]);
@@ -142,6 +144,7 @@ const AllMenu = () => {
 
       // Increment cart count using the context function
       addToCartNumber();
+      toast.success(`${dish.Dish_Title} added to cart!`);
     } catch (error) {
       console.error("Error adding item to cart:", error);
       alert("Failed to add item to cart. Please try again.");
@@ -152,154 +155,184 @@ const AllMenu = () => {
   };
 
   return (
-    <div>
-      <NotificationManager />
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        closeButton={false}
+        hideProgressBar={false}
+        newestOnTop={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        style={{ marginTop: "60px" }}
+      />
+      <div>
+        <NotificationManager />
 
-      {/* Removed NotificationModal and NotificationsCenter - these are handled by Navbar */}
+        {/* Removed NotificationModal and NotificationsCenter - these are handled by Navbar */}
 
-      <Navbar />
+        <Navbar />
 
-      <section
-        className="our-menu section bg-light repeat-img"
-        id="menu"
-        style={{ backgroundImage: `url(${imagebg})` }}
-      >
-        <div className="sec-wp">
-          <div className="container">
-            <div className="row">
-              <div className="col-lg-12">
-                <div className="sec-title text-center">
-                  <p className="sec-sub-title mb-3">our menu</p>
-                  <h2 className="h2-title">
-                    discover our <span>delicious options</span>
-                  </h2>
-                  <div className="sec-title-shape mb-4">
-                    <img src={titleshape} alt="" />
+        <section
+          className="our-menu section bg-light repeat-img"
+          id="menu"
+          style={{ backgroundImage: `url(${imagebg})` }}
+        >
+          <div className="sec-wp">
+            <div className="container">
+              <div className="row">
+                <div className="col-lg-12">
+                  <div className="sec-title text-center">
+                    <p className="sec-sub-title mb-3">our menu</p>
+                    <h2 className="h2-title">
+                      discover our <span>delicious options</span>
+                    </h2>
+                    <div className="sec-title-shape mb-4">
+                      <img src={titleshape} alt="" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            {/* Search bar */}
-            <div className="search-bar mb-4 text-center">
-              <div className="search-container">
-                <FontAwesomeIcon icon={faSearch} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search dishes or categories"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="search-input"
-                />
+
+              {/* Search bar */}
+              <div className="search-bar mb-4 text-center">
+                <div className="search-container">
+                  <FontAwesomeIcon icon={faSearch} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search dishes or categories"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="search-input"
+                  />
+                </div>
               </div>
-            </div>
-            
-            {/* Horizontal Category List */}
-            <div className="category-list">
-              <button
-                className={`category-item ${
-                  selectedCategory === "" ? "active" : ""
-                }`}
-                onClick={() => setSelectedCategory("")}
-              >
-                All
-              </button>
-              {categories.map((category, index) => (
+
+              {/* Horizontal Category List */}
+              <div className="category-list">
                 <button
-                  key={index}
                   className={`category-item ${
-                    selectedCategory === category ? "active" : ""
+                    selectedCategory === "" ? "active" : ""
                   }`}
-                  onClick={() => setSelectedCategory(category)}
+                  onClick={() => setSelectedCategory("")}
                 >
-                  {category}
+                  All
                 </button>
-              ))}
-            </div>
-
-            {loading && (
-              <div className="text-center py-5">
-                <FontAwesomeIcon icon={faSpinner} spin size="2x" />
-                <p className="mt-3">Loading menu items...</p>
+                {categories.map((category, index) => (
+                  <button
+                    key={index}
+                    className={`category-item ${
+                      selectedCategory === category ? "active" : ""
+                    }`}
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
               </div>
-            )}
 
-            {error && (
-              <div className="text-center py-5 text-danger">
-                <p>{error}</p>
-                <button
-                  className="btn btn-outline-primary mt-3"
-                  onClick={() => window.location.reload()}
-                >
-                  Try Again
-                </button>
-              </div>
-            )}
+              {loading && (
+                <div className="text-center py-5">
+                  <FontAwesomeIcon icon={faSpinner} spin size="2x" />
+                  <p className="mt-3">Loading menu items...</p>
+                </div>
+              )}
 
-            {!loading && !error && (
-              <div className="menu-list-row">
-                <div className="row g-xxl-5 bydefault_show" id="menu-dish">
-                  {filteredMenu.length > 0 ? (
-                    filteredMenu.map(dish => (
-                      <div
-                        key={dish.id}
-                        className={`col-lg-4 col-sm-6 dish-box-wp ${dish.Dish_Type?.toLowerCase() || 'other'}`}
-                        data-cat={dish.Dish_Type?.toLowerCase() || 'other'}
-                      >
-                        <div className="dish-box text-center">
-                          {/* Feature badges */}
-                          {(dish.feature_type === 'most_ordered' || (dish.feature_type && dish.feature_type.type === 'most_ordered')) && (
-                            <div className="feature-badge most-ordered">
-                              <FontAwesomeIcon icon={faFireFlameCurved} /> Popular
-                            </div>
-                          )}
-                          {(dish.feature_type === 'highest_rated' || (dish.feature_type && dish.feature_type.type === 'highest_rated')) && (
-                            <div className="feature-badge highest-rated">
-                              <FontAwesomeIcon icon={faAward} /> Top Rated
-                            </div>
-                          )}
-                          
-                          <div className="dist-img">
-                            <img
-                              src={dish.Dish_Img}
-                              alt={dish.Dish_Title}
-                              onError={e => {
-                                e.target.onerror = null;
-                                e.target.src = "assets/images/placeholder-food.jpg";
-                              }}
-                            />
-                          </div>
-                          
-                          {/* Enhanced rating display */}
-                          <div className="dish-rating">
-                            {parseFloat(dish.Dish_Rating) > 0 ? (
-                              <>
-                                <span>{parseFloat(dish.Dish_Rating).toFixed(1)}</span>
-                                {[1, 2, 3, 4, 5].map((star, index) => (
-                                  <FontAwesomeIcon 
-                                    key={index}
-                                    icon={faStar} 
-                                    style={{
-                                      color: star <= Math.round(dish.Dish_Rating) ? "#ffd700" : "#ccc",
-                                      marginLeft: "2px",
-                                      fontSize: "0.8em"
-                                    }}
-                                  />
-                                ))}
-                                <small>({dish.ratings_count || 0})</small>
-                              </>
-                            ) : (
-                              <span style={{ fontSize: "0.8em", color: "#999" }}>No ratings</span>
+              {error && (
+                <div className="text-center py-5 text-danger">
+                  <p>{error}</p>
+                  <button
+                    className="btn btn-outline-primary mt-3"
+                    onClick={() => window.location.reload()}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+
+              {!loading && !error && (
+                <div className="menu-list-row">
+                  <div className="row g-xxl-5 bydefault_show" id="menu-dish">
+                    {filteredMenu.length > 0 ? (
+                      filteredMenu.map((dish) => (
+                        <div
+                          key={dish.id}
+                          className={`col-lg-4 col-sm-6 dish-box-wp ${
+                            dish.Dish_Type?.toLowerCase() || "other"
+                          }`}
+                          data-cat={dish.Dish_Type?.toLowerCase() || "other"}
+                        >
+                          <div className="dish-box text-center">
+                            {/* Feature badges */}
+                            {(dish.feature_type === "most_ordered" ||
+                              (dish.feature_type &&
+                                dish.feature_type.type === "most_ordered")) && (
+                              <div className="feature-badge most-ordered">
+                                <FontAwesomeIcon icon={faFireFlameCurved} />{" "}
+                                Popular
+                              </div>
                             )}
-                          </div>
-                          
-                          <div className="dish-title">
-                            <h3 className="h3-title">{dish.Dish_Title}</h3>
-                            <p>{dish.Dish_Type}</p>
-                          </div>
-                          
-                          <div className="dish-info">
-                            <ul>
+                            {(dish.feature_type === "highest_rated" ||
+                              (dish.feature_type &&
+                                dish.feature_type.type ===
+                                  "highest_rated")) && (
+                              <div className="feature-badge highest-rated">
+                                <FontAwesomeIcon icon={faAward} /> Top Rated
+                              </div>
+                            )}
+
+                            <div className="dist-img">
+                              <img
+                                src={dish.Dish_Img}
+                                alt={dish.Dish_Title}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src =
+                                    "assets/images/placeholder-food.jpg";
+                                }}
+                              />
+                            </div>
+
+                            {/* Enhanced rating display */}
+                            <div className="dish-rating">
+                              {parseFloat(dish.Dish_Rating) > 0 ? (
+                                <>
+                                  <span>
+                                    {parseFloat(dish.Dish_Rating).toFixed(1)}
+                                  </span>
+                                  {[1, 2, 3, 4, 5].map((star, index) => (
+                                    <FontAwesomeIcon
+                                      key={index}
+                                      icon={faStar}
+                                      style={{
+                                        color:
+                                          star <= Math.round(dish.Dish_Rating)
+                                            ? "#ffd700"
+                                            : "#ccc",
+                                        marginLeft: "2px",
+                                        fontSize: "0.8em",
+                                      }}
+                                    />
+                                  ))}
+                                  <small>({dish.ratings_count || 0})</small>
+                                </>
+                              ) : (
+                                <span
+                                  style={{ fontSize: "0.8em", color: "#999" }}
+                                >
+                                  No ratings
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="dish-title">
+                              <h3 className="h3-title">{dish.Dish_Title}</h3>
+                              <p>{dish.Dish_Type}</p>
+                            </div>
+
+                            <div className="dish-info">
+                              {/* <ul>
                               <li>
                                 <p>Type</p>
                                 <b>{dish.Dish_Type}</b>
@@ -308,60 +341,61 @@ const AllMenu = () => {
                                 <p>Persons</p>
                                 <b>{dish.Dish_Persons || 1}</b>
                               </li>
-                            </ul>
-                          </div>
-                          
-                          <div className="dist-bottom-row">
-                            <ul>
-                              <li>
-                                <b className="price">
-                                  ₱
-                                  {typeof dish.Dish_Price === "number"
-                                    ? dish.Dish_Price.toFixed(2)
-                                    : dish.Dish_Price}
-                                </b>
-                              </li>
-                              <li>
-                                <button
-                                  className="dish-add-btn"
-                                  onClick={() => handleAddToCart(dish)}
-                                  disabled={addingToCart[dish.id]}
-                                >
-                                  {addingToCart[dish.id] ? (
-                                    <FontAwesomeIcon icon={faSpinner} spin />
-                                  ) : (
-                                    <FontAwesomeIcon icon={faPlus} />
-                                  )}
-                                </button>
-                              </li>
-                            </ul>
+                            </ul> */}
+                            </div>
+
+                            <div className="dist-bottom-row">
+                              <ul>
+                                <li>
+                                  <b className="price">
+                                    ₱
+                                    {typeof dish.Dish_Price === "number"
+                                      ? dish.Dish_Price.toFixed(2)
+                                      : dish.Dish_Price}
+                                  </b>
+                                </li>
+                                <li>
+                                  <button
+                                    className="dish-add-btn"
+                                    onClick={() => handleAddToCart(dish)}
+                                    disabled={addingToCart[dish.id]}
+                                  >
+                                    {addingToCart[dish.id] ? (
+                                      <FontAwesomeIcon icon={faSpinner} spin />
+                                    ) : (
+                                      <FontAwesomeIcon icon={faPlus} />
+                                    )}
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="col-12 text-center py-4">
+                        <p>No menu items match your search criteria.</p>
+                        {searchTerm && (
+                          <button
+                            className="btn btn-sm btn-outline-secondary mt-2"
+                            onClick={() => {
+                              setSearchTerm("");
+                              setSelectedCategory("");
+                            }}
+                          >
+                            Clear Search
+                          </button>
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <div className="col-12 text-center py-4">
-                      <p>No menu items match your search criteria.</p>
-                      {searchTerm && (
-                        <button
-                          className="btn btn-sm btn-outline-secondary mt-2"
-                          onClick={() => {
-                            setSearchTerm("");
-                            setSelectedCategory("");
-                          }}
-                        >
-                          Clear Search
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   );
 };
 
