@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import "../../assets/css/modal.css";
 import axios from "axios";
 import Forgotpassword from "./forgot.password";
-import TokenManager from '../../utils/tokenManager'; // Import the token manager
+import TokenManager from "../../utils/tokenManager"; // Import the token manager
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -36,7 +36,7 @@ function Login({
 
     // Single login endpoint for both customers and employees
     axios
-      .post("http://127.0.0.1:8000/api/login", {
+      .post("https://api.sunblends.store/api/login", {
         email,
         password,
       })
@@ -47,10 +47,10 @@ function Login({
           // Store token securely with TokenManager
           if (res.data.token) {
             TokenManager.setToken(res.data.token, res.data.user);
-            
+
             // Set minimal session indicator in sessionStorage
-            sessionStorage.setItem('user_id', res.data.user.customer_id);
-            sessionStorage.setItem('is_authenticated', 'true');
+            sessionStorage.setItem("user_id", res.data.user.customer_id);
+            sessionStorage.setItem("is_authenticated", "true");
           }
 
           // Handle different user types
@@ -82,26 +82,25 @@ function Login({
       });
   }
 
-  
   // Updated Google login function with email domain validation
   const handleGoogleLogin = (credentialResponse) => {
     const credentialResponseDecoded = jwtDecode(credentialResponse.credential);
     const { name, email, picture } = credentialResponseDecoded;
-    
+
     // Check if email is from the organization domain
-    if (!email.endsWith('@tua.edu.ph')) {
+    if (!email.endsWith("@tua.edu.ph")) {
       alert("Please use your TUA organizational email (@tua.edu.ph) to login.");
       return;
     }
 
     // Set CSRF token in headers before making the request
     if (window.csrfToken) {
-      axios.defaults.headers.common['X-CSRF-TOKEN'] = window.csrfToken;
+      axios.defaults.headers.common["X-CSRF-TOKEN"] = window.csrfToken;
     }
-    
+
     axios
       .post(
-        "http://127.0.0.1:8000/api/auth/google/callback",
+        "https://api.sunblends.store/api/auth/google/callback",
         {
           customer_name: name,
           customer_email: email,
@@ -112,16 +111,16 @@ function Login({
       )
       .then((response) => {
         // Order successful
-                toast.success("Logged In successfully!", {
-                  position: "top-right",
-                  autoClose: 2000,
-                  hideProgressBar: false,
-                  closeOnClick: true,
-                  pauseOnHover: true,
-                  draggable: true,
-                  progress: undefined,
-                });
-        
+        toast.success("Logged In successfully!", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+
         // Store token securely with TokenManager
         if (response.data.token) {
           const userData = {
@@ -130,14 +129,14 @@ function Login({
             customer_email: email,
             customer_picture: picture,
           };
-          
+
           TokenManager.setToken(response.data.token, userData);
-          
+
           // Set minimal session indicator in sessionStorage
-          sessionStorage.setItem('user_id', response.data.customer_id);
-          sessionStorage.setItem('is_authenticated', 'true');
+          sessionStorage.setItem("user_id", response.data.customer_id);
+          sessionStorage.setItem("is_authenticated", "true");
         }
-        
+
         setIsLoggedIn(true);
 
         // Set user data
@@ -147,7 +146,7 @@ function Login({
           customer_email: email,
           customer_picture: picture,
         });
-        
+
         toggleModalLogin();
       })
       .catch((err) => {
@@ -175,7 +174,7 @@ function Login({
               <h2>Log In</h2>
 
               <form onSubmit={handleSubmit}>
-                 <div className="form-element">
+                <div className="form-element">
                   <label htmlFor="email">Email</label>
                   <input
                     className="email"
@@ -200,8 +199,8 @@ function Login({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                </div> 
-                 <div className="form-element">
+                </div>
+                <div className="form-element">
                   <button
                     className="forgot-password"
                     type="button"
@@ -209,15 +208,15 @@ function Login({
                   >
                     Forgot password?
                   </button>
-                </div> 
+                </div>
                 <div className="form-element">
-                   <button
+                  <button
                     type="submit"
                     id="signin-button"
                     style={{ marginBottom: "0" }}
                   >
                     Sign In
-                  </button> 
+                  </button>
 
                   <div
                     className="google-login"
