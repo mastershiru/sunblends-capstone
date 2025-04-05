@@ -201,7 +201,7 @@ function Login({
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div> 
-                {/* <div className="form-element">
+                 <div className="form-element">
                   <button
                     className="forgot-password"
                     type="button"
@@ -209,7 +209,7 @@ function Login({
                   >
                     Forgot password?
                   </button>
-                </div> */
+                </div> 
                 <div className="form-element">
                    <button
                     type="submit"
