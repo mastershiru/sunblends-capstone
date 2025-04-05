@@ -66,7 +66,9 @@ const AllMenu = () => {
       setLoading(true);
       try {
         // First try the advanced menu endpoint to get ratings data
-        const response = await axios.get(`${API_BASE_URL}/advanced-menu`);
+        const response = await axios.get(`${API_BASE_URL}/advanced-menu`, { 
+          withCredentials: true 
+        });
         
         if (response.data.success) {
           console.log("Advanced menu data loaded successfully:", response.data);
@@ -97,7 +99,9 @@ const AllMenu = () => {
         } else {
           // Fallback to regular menu endpoint
           console.log("Advanced menu failed, trying fallback...");
-          const fallbackResponse = await axios.get(`${API_BASE_URL}/menu-items`);
+          const fallbackResponse = await axios.get(`${API_BASE_URL}/menu-items`, { 
+            withCredentials: true 
+          });
           
           const availableItems = fallbackResponse.data.filter(
             dish => dish.isAvailable !== 0 && dish.isAvailable !== false
@@ -131,9 +135,24 @@ const AllMenu = () => {
   const handleAddToCart = async dish => {
     // Set the specific dish as loading
     setAddingToCart(prev => ({ ...prev, [dish.id]: true }));
-
+  
+    const email = localStorage.getItem("email");
+  
     try {
-      // Add to cart using the context function
+      if (isLoggedIn && email) {
+        // For logged-in users, add to server-side cart
+        await axios.post(
+          `${API_BASE_URL}/addToCart`,
+          {
+            email: email,
+            dish_id: dish.id,
+            quantity: 1,
+          },
+          { withCredentials: true }
+        );
+      }
+  
+      // Always update local UI cart
       addToCart({
         id: dish.id,
         img: dish.Dish_Img,
@@ -141,8 +160,7 @@ const AllMenu = () => {
         price: dish.Dish_Price,
         quantity: 1,
       });
-
-      // Increment cart count using the context function
+  
       addToCartNumber();
       toast.success(`${dish.Dish_Title} added to cart!`);
     } catch (error) {
