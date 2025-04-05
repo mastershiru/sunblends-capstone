@@ -175,7 +175,7 @@ function Login({
               <h2>Log In</h2>
 
               <form onSubmit={handleSubmit}>
-                {/* <div className="form-element">
+                 <div className="form-element">
                   <label htmlFor="email">Email</label>
                   <input
                     className="email"
@@ -200,7 +200,7 @@ function Login({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                </div> */}
+                </div> 
                 {/* <div className="form-element">
                   <button
                     className="forgot-password"
@@ -209,15 +209,15 @@ function Login({
                   >
                     Forgot password?
                   </button>
-                </div> */}
+                </div> */
                 <div className="form-element">
-                  {/* <button
+                   <button
                     type="submit"
                     id="signin-button"
                     style={{ marginBottom: "0" }}
                   >
                     Sign In
-                  </button> */}
+                  </button> 
 
                   <div
                     className="google-login"
