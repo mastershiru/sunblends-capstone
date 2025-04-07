@@ -26,7 +26,7 @@ Route::get('/employee/login', function () {
 })->name('employee.login');
 Route::post('/login', [LoginController::class, 'login'])->name('login');
 Route::get('/logout', [LogoutController::class, 'logout'])->name('logout');
-Route::get('/menu', [menuController::class, 'index'])->name('menu.index');
+
 
 // Customer routes
 Route::middleware(['customer_view'])->group(function () {
@@ -39,7 +39,7 @@ Route::middleware(['employee_view'])->group(function () {
     Route::get('/Orders-Queue', [OrderQueueController::class, 'index'])->name('orders.queue');
     Route::get('/Dine-in', [dineInController::class, 'index'])->name('dine.in');
     Route::get('/reservation/Dashboard', [reservationDashboardController::class, 'index'])->name('reservation.dashboard');
-   
+    Route::get('/menu', [menuController::class, 'index']);
     Route::get('/Transaction', function () {
         return view('Transaction_Dashboard');
     })->name('transaction.index');

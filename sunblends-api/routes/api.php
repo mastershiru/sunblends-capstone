@@ -101,8 +101,6 @@ Route::get('/dashboard', [DashboardController::class, 'index']);
 
     Route::get('/Orders-Queue', [OrderQueueController::class, 'index']);
 
-    Route::get('/menu', [menuController::class, 'index']);
-
     // Cart & Checkout API Routes
     Route::post('/getUserData', [CartApiController::class, 'getUserData']);
     Route::post('/addToCart', [CartApiController::class, 'addToCart']);
