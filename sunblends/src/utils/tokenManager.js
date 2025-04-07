@@ -7,7 +7,7 @@ let currentUser = null;
 // SessionStorage keys - safe to keep minimal data for persistence
 const SESSION_AUTH_FLAG = 'is_authenticated';
 const SESSION_USER_ID = 'user_id';
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000/api";
 
 
 
