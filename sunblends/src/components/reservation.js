@@ -37,7 +37,7 @@ const BookingTable = () => {
   const [pendingReservation, setPendingReservation] = useState(null);
 
   // API URL
-  const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000/api";
 
   // navigate to other screen like home to All menu, all menu to home----------------------------------------------------------------------------
   const location = useLocation();

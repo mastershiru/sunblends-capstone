@@ -575,8 +575,7 @@ export const NavbarProvider = ({ children }) => {
       const response = await axios.get(`${API_BASE_URL}/notifications`, {
         withCredentials: true,
         headers: {
-          'Authorization': `Bearer ${TokenManager.getToken()}`,
-          'Accept': 'application/json'
+          headers
         }
       });
 

@@ -73,13 +73,13 @@ const NotificationModal = () => {
   
       // Fetch order details
       const orderResponse = await axios.get(
-        `http://127.0.0.1:8000/api/orders/${orderId}`,
+        `https://api.sunblends.store/api/orders/${orderId}`,
         { headers }
       );
       
       // Get order items
       const cartResponse = await axios.get(
-        `http://127.0.0.1:8000/api/orders/${orderId}/items`,
+        `https://api.sunblends.store/api/orders/${orderId}/items`,
         { headers }
       );
   
@@ -90,7 +90,7 @@ const NotificationModal = () => {
       if (orderData.customer_id) {
         try {
           const customerOrdersResponse = await axios.get(
-            `http://127.0.0.1:8000/api/orders/customer/${orderData.customer_id}`,
+            `https://api.sunblends.store/api/orders/customer/${orderData.customer_id}`,
             { headers }
           );
           

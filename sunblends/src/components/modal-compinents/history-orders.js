@@ -55,7 +55,7 @@ const OrderDetails = ({
           
           // For each item in the cart, check if it has been rated
           const ratingPromises = cartItems.map(item => 
-            axios.get(`http://127.0.0.1:8000/api/ratings/check`, {
+            axios.get(`${API_BASE_URL}/ratings/check`, {
               params: {
                 dish_id: item.Item_Dish_ID,
                 order_id: selectedOrderId
@@ -659,7 +659,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       };
       
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/orders/${orderId}/cancel`,
+        `${API_BASE_URL}/orders/${orderId}/cancel`,
         {},
         { headers }
       );
@@ -703,7 +703,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       };
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/reservations/customer/${userData.customer_id}`,
+        `${API_BASE_URL}/reservations/customer/${userData.customer_id}`,
         { headers }
       );
 
@@ -738,7 +738,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       };
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/orders/customer/${userData.customer_id}`,
+        `${API_BASE_URL}/orders/customer/${userData.customer_id}`,
         { headers }
       );
 
@@ -780,7 +780,7 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
       };
       
       const response = await axios.post(
-        `http://127.0.0.1:8000/api/reservations/${reservationId}/cancel`,
+        `${API_BASE_URL}/reservations/${reservationId}/cancel`,
         {},
         { headers }
       );
