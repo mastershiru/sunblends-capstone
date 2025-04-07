@@ -97,7 +97,7 @@ const NotificationModal = () => {
           if (customerOrdersResponse.data && customerOrdersResponse.data.success) {
             // Find the complete order data with all fields
             const completeOrderData = customerOrdersResponse.data.orders.find(
-              order => order.order_id == orderId
+              order => order.order_id === orderId
             );
             
             if (completeOrderData) {
