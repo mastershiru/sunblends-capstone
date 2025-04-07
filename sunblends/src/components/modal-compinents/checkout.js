@@ -44,7 +44,7 @@ const Checkout = ({
       // Convert to minutes for easier comparison
       const currentTimeInMinutes = hour * 60 + minutes;
       const openingTimeInMinutes = 5 * 60; // 5:00 AM
-      const closingTimeInMinutes = 17 * 60; // 5:00 PM
+      const closingTimeInMinutes = 19 * 60; // 5:00 PM
 
       // Within operating hours if current time is >= opening and < closing
       const isOpen =
@@ -292,7 +292,7 @@ const Checkout = ({
                           src={
                             item.img.startsWith("http")
                               ? item.img
-                              : `http://127.0.0.1:8000/${item.img}`
+                              : `https://api.sunblends.store/${item.img}`
                           }
                           alt={item.title}
                           className="checkout-item-img"
@@ -300,7 +300,7 @@ const Checkout = ({
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
-                              "http://127.0.0.1:8000/images/placeholder-food.jpg";
+                              "https://api.sunblends.store/images/placeholder-food.jpg";
                           }}
                         />
                         <div>
