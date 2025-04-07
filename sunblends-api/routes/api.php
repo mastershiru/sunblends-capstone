@@ -19,6 +19,7 @@ use App\Http\Controllers\reservationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\EmployeeController;
 
 
 Route::get('/user', function (Request $request) {
