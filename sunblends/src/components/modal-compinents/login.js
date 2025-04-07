@@ -25,6 +25,8 @@ function Login({
   const [isOpenForgotpassword, setIsOpenForgotpassword] = useState(false);
   const navigate = useNavigate();
 
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "https://api.sunblends.store/api";
+
   const handleForgotpassword = () => {
     setIsOpenForgotpassword(true);
     toggleModalLogin(false);
@@ -36,7 +38,7 @@ function Login({
 
     // Single login endpoint for both customers and employees
     axios
-      .post("https://api.sunblends.store/api/login", {
+    .post(`${API_BASE_URL}/login`, {
         email,
         password,
       })
@@ -100,7 +102,7 @@ function Login({
 
     axios
       .post(
-        "https://api.sunblends.store/api/auth/google/callback",
+        `${API_BASE_URL}/auth/google/callback`,
         {
           customer_name: name,
           customer_email: email,
@@ -238,7 +240,7 @@ function Login({
                     id="employee-login"
                     onClick={() =>
                       (window.location.href =
-                        "http://127.0.0.1:8000/employee/login")
+                        `${API_BASE_URL.replace('/api', '')}/employee/login`)
                     }
                   >
                     Employee Login
