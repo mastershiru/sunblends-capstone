@@ -33,7 +33,7 @@ function Login({
     axios.defaults.withCredentials = true;
     
     // Get CSRF cookie from the API
-    axios.get(`${API_BASE_URL.replace('/api', '')}/sanctum/csrf-cookie`)
+    axios.get(`https://api.sunblends.store/sanctum/csrf-cookie`)
       .catch(error => {
         console.error("Error fetching CSRF cookie:", error);
       });
