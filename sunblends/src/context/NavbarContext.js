@@ -572,12 +572,10 @@ export const NavbarProvider = ({ children }) => {
         "Content-Type": "application/json",
       };
 
-      const response = await axios.get(`${API_BASE_URL}/notifications`, {
-        withCredentials: true,
-        headers: {
-          headers
-        }
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/notifications?customer_id=${userData.customer_id}`,
+        { headers }
+      );
 
       if (response.data.success) {
         // Process notifications
@@ -638,14 +636,8 @@ export const NavbarProvider = ({ children }) => {
 
       const response = await axios.post(
         `${API_BASE_URL}/notifications/${id}/read`,
-        {},
-        {
-          withCredentials: true,
-          headers: {
-            'Authorization': `Bearer ${TokenManager.getToken()}`,
-            'Accept': 'application/json'
-          }
-        }
+        { customer_id: userData.customer_id },
+        { headers }
       );
 
       if (response.data.success) {
