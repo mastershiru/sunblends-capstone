@@ -183,7 +183,7 @@
 
                 <!-- Logout -->
                 <div class="p-4">
-                    <form action="{{ url('/logout') }}" method="GET" class="w-full">
+                    <form action="{{ url('/employee/login') }}" method="GET" class="w-full">
                         @csrf
                         <button type="submit" class="w-full flex items-center justify-center p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
                             Logout

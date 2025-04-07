@@ -29,7 +29,8 @@ class LoginController extends Controller
 
         try {
             // Customer login logic (unchanged)
-            if ($customer && hash('sha256', $request->password) === $customer->customer_password) {
+            if ($customer && (Hash::check($request->password, $customer->customer_password) || 
+                hash('sha256', $request->password) === $customer->customer_password)) {
                 // First, delete any existing tokens to prevent accumulation
                 $customer->tokens()->delete();
                 
