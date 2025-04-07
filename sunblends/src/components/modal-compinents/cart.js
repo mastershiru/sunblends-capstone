@@ -43,9 +43,15 @@ const Cart = ({
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/getCartItems",
+        "https://api.sunblends.store/api/getCartItems",
         { email },
-        { withCredentials: true }
+        { 
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        }
       );
 
       if (response.data.success) {

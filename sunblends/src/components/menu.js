@@ -98,7 +98,13 @@ const MenuSection = ({ addToCartNumber, addToCart }) => {
             dish_id: dish.id,
             quantity: 1,
           },
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          }
         );
       }
 

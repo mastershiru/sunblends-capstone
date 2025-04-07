@@ -130,7 +130,13 @@ function Login({
           customer_picture: picture,
           Customer_Number: "N/A",
         },
-        { withCredentials: true }
+        { 
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        }
       )
       .then((response) => {
         toast.dismiss(loadingToastId);

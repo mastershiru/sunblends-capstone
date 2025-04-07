@@ -20,6 +20,7 @@ const TokenManager = {
     
     // Set default Authorization header for all future axios requests
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    axios.defaults.withCredentials = true;
     
     // Store minimal indicator in sessionStorage for persistence across page refreshes
     sessionStorage.setItem(SESSION_AUTH_FLAG, 'true');
@@ -92,6 +93,12 @@ const TokenManager = {
         is_refresh: true,  
         clean_tokens: true,  // This will clean up any non-customer-token tokens
         token_type: 'customer-token' // Explicitly tell server we want customer-token
+      }, {
+        withCredentials: true,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       
       if (response.data.success && response.data.token) {
@@ -161,9 +168,11 @@ const TokenManager = {
         `${API_BASE_URL}/check-token`,
         {},  // empty body
         {
+          withCredentials: true,
           headers: {
             'Authorization': `Bearer ${this.getToken()}`,
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
           }
         }
       );
@@ -214,7 +223,8 @@ const TokenManager = {
       return await axios({
         ...config,
         headers,
-        url
+        url,
+        withCredentials: true
       });
     } catch (error) {
       // Handle 401 unauthorized errors with token refresh
