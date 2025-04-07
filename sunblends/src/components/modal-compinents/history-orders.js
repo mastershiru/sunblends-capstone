@@ -29,6 +29,7 @@ const OrderDetails = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [ratings, setRatings] = useState({});
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "https://api.sunblends.store/api";
 
   // Fallback image as base64
   const fallbackImageSrc =
@@ -88,25 +89,31 @@ const OrderDetails = ({
     setError(null);
 
     try {
-      // Get token from TokenManager
-      const token = TokenManager.getToken();
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      };
-
-      // Fetch order details
+      // Update the axios calls to use consistent API_BASE_URL
       const orderResponse = await axios.get(
-        `http://127.0.0.1:8000/api/orders/${orderId}`,
-        { headers }
+        `${API_BASE_URL}/orders/${orderId}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${TokenManager.getToken()}`
+          }
+        }
       );
-
+      
+     
       setOrderDetails(orderResponse.data);
 
       // Get order items
       const cartResponse = await axios.get(
-        `http://127.0.0.1:8000/api/orders/${orderId}/items`,
-        { headers }
+        `${API_BASE_URL}/orders/${orderId}/items`,
+        {
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${TokenManager.getToken()}`
+          }
+        }
       );
 
       if (cartResponse.data && cartResponse.data.success) {
@@ -127,23 +134,21 @@ const OrderDetails = ({
       // Show a loading indicator or disable the stars while submitting
       setIsLoading(true);
       
-      // Get token from TokenManager
-      const token = TokenManager.getToken();
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      };
-      
-      // Submit the rating to the API
       const response = await axios.post(
-        'http://127.0.0.1:8000/api/dishes/rate',
+        `${API_BASE_URL}/dishes/rate`,
         {
           dish_id: dishId,
           order_id: selectedOrderId,
           rating: rating
         },
-        { headers }
+        {
+          withCredentials: true,
+          headers: {
+            'Authorization': `Bearer ${TokenManager.getToken()}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        }
       );
       
       if (response.data.success) {

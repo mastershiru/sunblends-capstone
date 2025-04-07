@@ -86,7 +86,7 @@ const Checkout = ({
 
       try {
         const response = await axios.post(
-          "http://127.0.0.1:8000/api/getUserData",
+          "https://api.sunblends.store/api/getUserData",
           { email },
           { withCredentials: true }
         );
@@ -169,13 +169,13 @@ const Checkout = ({
 
     try {
       // First make sure we have a CSRF token
-      await axios.get("http://127.0.0.1:8000/sanctum/csrf-cookie", {
+      await axios.get("https://api.sunblends.store/sanctum/csrf-cookie", {
         withCredentials: true,
       });
 
       // Place the order through our API
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/checkout",
+        "https://api.sunblends.store/api/checkout",
         {
           email,
           paymentMethod,
