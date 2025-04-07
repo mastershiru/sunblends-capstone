@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import "../../assets/css/modal.css";
 import axios from "axios";
 import Forgotpassword from "./forgot.password";
-import TokenManager from "../../utils/tokenManager"; // Import the token manager
+import TokenManager from "../../utils/tokenManager";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -27,24 +27,44 @@ function Login({
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || "https://api.sunblends.store/api";
 
+  // Configure axios defaults for CSRF and credentials
+  useEffect(() => {
+    // Enable sending cookies with cross-origin requests
+    axios.defaults.withCredentials = true;
+    
+    // Get CSRF cookie from the API
+    axios.get(`${API_BASE_URL.replace('/api', '')}/sanctum/csrf-cookie`)
+      .catch(error => {
+        console.error("Error fetching CSRF cookie:", error);
+      });
+  }, [API_BASE_URL]);
+
   const handleForgotpassword = () => {
     setIsOpenForgotpassword(true);
     toggleModalLogin(false);
   };
 
-  // Updated login function with secure token storage
   function handleSubmit(event) {
     event.preventDefault();
 
-    // Single login endpoint for both customers and employees
+    // Show loading toast
+    const loadingToastId = toast.loading("Logging in...");
+
     axios
-    .post(`${API_BASE_URL}/login`, {
+      .post(`${API_BASE_URL}/login`, {
         email,
         password,
+      }, {
+        withCredentials: true // Ensure cookies are sent with the request
       })
       .then((res) => {
+        toast.dismiss(loadingToastId);
+        
         if (res.data.success) {
-          alert(res.data.message);
+          toast.success(res.data.message, {
+            position: "top-right",
+            autoClose: 2000,
+          });
 
           // Store token securely with TokenManager
           if (res.data.token) {
@@ -60,8 +80,6 @@ function Login({
             setIsLoggedIn(true);
             setUserData(res.data.user);
             toggleModalLogin();
-
-            // Redirect to dish page or stay on current page
           } else if (res.data.message.includes("Employee")) {
             // Redirect to dashboard or appropriate page
             window.location.href = res.data.redirect;
@@ -69,36 +87,39 @@ function Login({
 
           setPassword("");
         } else {
-          alert("Login Failed: " + res.data.message);
+          toast.error("Login Failed: " + res.data.message, {
+            position: "top-right",
+          });
           setEmail("");
           setPassword("");
         }
       })
       .catch((err) => {
+        toast.dismiss(loadingToastId);
         console.error("Login error:", err);
         const errorMessage =
           err.response?.data?.message || "An error occurred. Please try again.";
-        alert(errorMessage);
-        setEmail("");
+        toast.error(errorMessage, {
+          position: "top-right",
+        });
         setPassword("");
       });
   }
 
-  // Updated Google login function with email domain validation
   const handleGoogleLogin = (credentialResponse) => {
     const credentialResponseDecoded = jwtDecode(credentialResponse.credential);
     const { name, email, picture } = credentialResponseDecoded;
 
     // Check if email is from the organization domain
     if (!email.endsWith("@tua.edu.ph")) {
-      alert("Please use your TUA organizational email (@tua.edu.ph) to login.");
+      toast.error("Please use your TUA organizational email (@tua.edu.ph) to login.", {
+        position: "top-right",
+      });
       return;
     }
 
-    // Set CSRF token in headers before making the request
-    if (window.csrfToken) {
-      axios.defaults.headers.common["X-CSRF-TOKEN"] = window.csrfToken;
-    }
+    // Show loading toast
+    const loadingToastId = toast.loading("Logging in with Google...");
 
     axios
       .post(
@@ -112,15 +133,10 @@ function Login({
         { withCredentials: true }
       )
       .then((response) => {
-        // Order successful
-        toast.success("Logged In successfully!", {
+        toast.dismiss(loadingToastId);
+        toast.success("Logged in successfully!", {
           position: "top-right",
           autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
         });
 
         // Store token securely with TokenManager
@@ -152,10 +168,14 @@ function Login({
         toggleModalLogin();
       })
       .catch((err) => {
+        toast.dismiss(loadingToastId);
         console.error("Google login error:", err.response?.data || err);
-        alert(
+        toast.error(
           "Google login failed: " +
-            (err.response?.data?.message || "Unknown error")
+            (err.response?.data?.message || "Unknown error"),
+          {
+            position: "top-right",
+          }
         );
       });
   };
@@ -229,7 +249,9 @@ function Login({
                     <GoogleLogin
                       onSuccess={handleGoogleLogin}
                       onError={() => {
-                        console.log("Login Failed");
+                        toast.error("Google login failed", {
+                          position: "top-right",
+                        });
                       }}
                     />
                   </div>
