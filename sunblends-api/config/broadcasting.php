@@ -35,12 +35,16 @@ return [
             'app_id' => env('REVERB_APP_ID', 'sunblends'),
             'key' => env('REVERB_APP_KEY', 'sunblends-key'),
             'secret' => env('REVERB_APP_SECRET', 'your-reverb-secret'),
-            'url' => env('REVERB_SERVER_URL', 'http://localhost:8080'),
+            'url' => env('REVERB_SERVER_URL', 'https://api.sunblends.store:8080'),
             'options' => [
-                'host' => env('REVERB_HOST', 'localhost'),
+                'host' => env('REVERB_HOST', '0.0.0.0'),
                 'port' => env('REVERB_PORT', 8080),
-                'scheme' => env('REVERB_SCHEME', 'http'),
-                
+                'scheme' => env('REVERB_SCHEME', 'https'),
+                'ssl' => [
+                    'local_cert' => '/etc/nginx/ssl/api.sunblends.store/certificate.crt',
+                    'local_pk' => '/etc/nginx/ssl/api.sunblends.store/private.key',
+                    'verify_peer' => false,
+                ],
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
