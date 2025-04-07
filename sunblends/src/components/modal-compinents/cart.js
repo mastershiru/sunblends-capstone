@@ -240,7 +240,7 @@ const Cart = ({
                             src={
                               item.img.startsWith("http")
                                 ? item.img // External URL
-                                : `http://127.0.0.1:8000/${item.img}` // Local storage image
+                                : `https://api.sunblends.store/${item.img}` // Local storage image
                             }
                             alt={item.title}
                             className="cart-item-img"
@@ -248,7 +248,7 @@ const Cart = ({
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src =
-                                "http://127.0.0.1:8000/images/placeholder-food.jpg";
+                                "https://api.sunblends.store/images/placeholder-food.jpg";
                             }}
                           />
                           <div>
