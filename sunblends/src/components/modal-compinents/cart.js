@@ -95,7 +95,7 @@ const Cart = ({
     try {
       setError(null);
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/updateCartItem",
+        "https://api.sunblends.store/api/updateCartItem",
         {
           cart_id: item.id,
           quantity: item.quantity + 1,
@@ -151,7 +151,7 @@ const Cart = ({
       if (item.quantity === 1) {
         // Remove item if quantity is 1
         const response = await axios.post(
-          "http://127.0.0.1:8000/api/removeCartItem",
+          "https://api.sunblends.store/api/removeCartItem",
           { cart_id: item.id },
           { withCredentials: true }
         );
@@ -164,7 +164,7 @@ const Cart = ({
       } else {
         // Decrease quantity
         const response = await axios.post(
-          "http://127.0.0.1:8000/api/updateCartItem",
+          "https://api.sunblends.store/api/updateCartItem",
           {
             cart_id: item.id,
             quantity: item.quantity - 1,
