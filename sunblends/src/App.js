@@ -22,7 +22,7 @@ function App() {
   return (
     <NavbarProvider>
       <Router>
-        
+        <NotificationManager/>
         <NotificationModal />
         <Navbar />
         <Modals />

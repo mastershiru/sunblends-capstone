@@ -235,7 +235,7 @@ export const NavbarProvider = ({ children }) => {
         disableStats: true,
         forceTLS: false,
         encrypted: false,
-        enabledTransports: ["ws", "wss"],
+        enabledTransports: ["ws"],
         authEndpoint: `${API_BASE_URL}/broadcasting/auth`,
         auth: TokenManager.hasToken()
           ? {
