@@ -617,6 +617,8 @@ const Orders = ({ isOpenOrders, toggleModalOrders }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeTab, setActiveTab] = useState("orders"); // "orders" or "reservations"
 
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "https://api.sunblends.store/api";
+
   // Update the orders fetching logic
   useEffect(() => {
     if (isOpenOrders && isLoggedIn && userData) {
