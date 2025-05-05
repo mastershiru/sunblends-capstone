@@ -20,17 +20,9 @@ class GoogleLoginController extends Controller
      */
     public function redirectToGoogle()
     {
-        // Get the current base URL without the /api prefix
-        $baseUrl = config('app.url');
-        // Ensure the callback URL is properly formed without duplicate /api
-        $redirectUrl = $baseUrl . '/auth/google/callback';
-        
-        \Log::info('Redirecting to Google OAuth with callback URL: ' . $redirectUrl);
-        
         return Socialite::driver('google')
             ->stateless()
-            ->redirectUrl($redirectUrl) // Explicitly set the redirect URL
-            ->with(['hd' => 'tua.edu.ph'])
+            ->with(['hd' => 'tua.edu.ph']) // Optional: restrict to TUA domain
             ->redirect();
     }
 

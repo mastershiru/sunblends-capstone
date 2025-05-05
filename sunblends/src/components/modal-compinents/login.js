@@ -26,7 +26,7 @@ function Login({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const API_BASE_URL = "https://api.sunblends.store/api";
+  const API_BASE_URL = "https://api.sunblends.store";
 
   // Configure axios defaults for CSRF and credentials
   useEffect(() => {
@@ -61,7 +61,7 @@ function Login({
     const loadingToastId = toast.loading("Logging in...");
 
     axios
-      .post(`${API_BASE_URL}/api/login`, {
+      .post(`${API_BASE_URL}/login`, {
         email,
         password,
       }, {
