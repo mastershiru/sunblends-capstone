@@ -306,7 +306,7 @@ function Login({
                     id="employee-login"
                     onClick={() =>
                       (window.location.href =
-                        `${API_BASE_URL.replace('/api', '')}/employee/login`)
+                        `https://api.sunblends.store/employee/login`)
                     }
                   >
                     Employee Login
