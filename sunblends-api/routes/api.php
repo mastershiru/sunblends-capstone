@@ -41,6 +41,9 @@ Route::get('/advanced-menu', [MenuApiController::class, 'advancedMenu']);
 
 Route::get('/test/login', [LoginController::class, 'show']);
 
+// Keep your existing route for backward compatibility
+Route::post('/auth/google/callback', [GoogleLoginController::class, 'googleLogin']);
+
 Route::get('/auth/google/url', [GoogleLoginController::class, 'getGoogleAuthUrl']);
 
 // Logout route

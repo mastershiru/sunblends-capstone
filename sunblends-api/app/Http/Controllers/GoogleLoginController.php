@@ -20,9 +20,17 @@ class GoogleLoginController extends Controller
      */
     public function redirectToGoogle()
     {
+        // Get the current base URL without the /api prefix
+        $baseUrl = config('app.url');
+        // Ensure the callback URL is properly formed without duplicate /api
+        $redirectUrl = $baseUrl . '/auth/google/callback';
+        
+        \Log::info('Redirecting to Google OAuth with callback URL: ' . $redirectUrl);
+        
         return Socialite::driver('google')
             ->stateless()
-            ->with(['hd' => 'tua.edu.ph']) // Optional: restrict to TUA domain
+            ->redirectUrl($redirectUrl) // Explicitly set the redirect URL
+            ->with(['hd' => 'tua.edu.ph'])
             ->redirect();
     }
 
@@ -210,34 +218,69 @@ class GoogleLoginController extends Controller
     public function logout(Request $request)
     {
         try {
-            $user = $request->user();
+            // Log the logout attempt for debugging
+            \Log::info('Logout attempt', [
+                'user_id' => $request->user() ? $request->user()->customer_id : null,
+                'has_session' => $request->hasSession(),
+            ]);
             
-            if ($user) {
-                $user->tokens()->delete();
+            // Revoke all user tokens
+            if ($request->user()) {
+                $request->user()->tokens()->delete();
             }
             
+            // Clear all guards
             Auth::guard('customer')->logout();
-            Session::flush();
-            Session::regenerate();
+            Auth::guard('web')->logout();
+            Auth::guard('sanctum')->logout();
             
-            $clearCookie = cookie(
-                'laravel_session', 
-                '', 
-                -1,
-                '/',
-                '.sunblends.store',
-                true,
-                false,
-                false,
-                'none'
-            );
+            // Clear all session data
+            if ($request->hasSession()) {
+                $request->session()->flush();
+                $request->session()->invalidate();
+                $request->session()->regenerate();
+            }
             
-            return response()->json([
+            // Create an array of cookies to clear
+            $cookiesToClear = [
+                'laravel_session',
+                'XSRF-TOKEN',
+                'remember_web',
+                'remember_customer',
+                'sunblends_session'
+            ];
+            
+            // Build response
+            $response = response()->json([
                 'success' => true,
-                'message' => 'Successfully logged out'
-            ])->withCookie($clearCookie);
+                'message' => 'Successfully logged out',
+                'cleared_session' => true,
+            ]);
             
+            // Clear all cookies
+            foreach ($cookiesToClear as $cookieName) {
+                $response->withCookie(
+                    cookie()->forget($cookieName)
+                );
+                
+                // Also clear with explicit domains
+                $response->withCookie(
+                    cookie($cookieName, '', -1, '/', '.sunblends.store')
+                );
+                $response->withCookie(
+                    cookie($cookieName, '', -1, '/', 'sunblends.store')
+                );
+                $response->withCookie(
+                    cookie($cookieName, '', -1, '/', 'api.sunblends.store')
+                );
+            }
+            
+            return $response;
         } catch (\Exception $e) {
+            \Log::error('Logout error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred during logout',

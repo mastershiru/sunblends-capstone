@@ -956,12 +956,13 @@ export const NavbarProvider = ({ children }) => {
                   'Authorization': `Bearer ${token}`,
                   'Accept': 'application/json',
                   'Content-Type': 'application/json'
-                }
+                },
+                // Important: Include credentials to ensure cookies are sent/cleared
+                withCredentials: true
               }
             );
             console.log("Successfully logged out on server");
           } catch (error) {
-            // Just log errors, but continue with client-side logout
             console.error("Error during server logout:", error);
           }
         }
@@ -977,20 +978,30 @@ export const NavbarProvider = ({ children }) => {
         
         // Clear all tokens and storage
         TokenManager.clearToken();
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("userData");
-        localStorage.removeItem("token");
-        localStorage.removeItem("email");
+        localStorage.clear(); // More thorough clearing
+        sessionStorage.clear(); // Also clear session storage
+        
+        // Clear cookies more aggressively
+        document.cookie.split(";").forEach(function(c) {
+          document.cookie = c.replace(/^ +/, "").replace(
+            /=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;domain=.sunblends.store"
+          );
+        });
+        
+        // Also clear cookies for the root domain
+        document.cookie.split(";").forEach(function(c) {
+          document.cookie = c.replace(/^ +/, "").replace(
+            /=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;domain=sunblends.store"
+          );
+        });
         
         // Clean up WebSocket connection
         if (window.Echo) {
           window.Echo.disconnect();
         }
         
-        // Redirect to home page for clean slate
-        window.location.href = '/';
-        
-        alert("You have been logged out.");
+        // Force reload the page instead of redirect
+        window.location.reload();
       }
     }
   };
