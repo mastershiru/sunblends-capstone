@@ -61,7 +61,7 @@ function Login({
     const loadingToastId = toast.loading("Logging in...");
 
     axios
-      .post(`${API_BASE_URL}/login`, {
+      .post(`${API_BASE_URL}/api/login`, {
         email,
         password,
       }, {
