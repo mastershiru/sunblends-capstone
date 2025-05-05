@@ -17,6 +17,7 @@ use App\Http\Controllers\reservationDashboardController;
 use App\Http\Controllers\dineInController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\GoogleLoginController;
 
 use App\Http\Middleware\CustomerView;
 
@@ -36,13 +37,15 @@ Route::middleware(['customer_view'])->group(function () {
     // Your customer-specific routes
 });
 
+Route::get('/menu', [menuController::class, 'index']);
+
 // Employee routes with base employee authentication
 Route::middleware(['employee_view'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard'); 
     Route::get('/Orders-Queue', [OrderQueueController::class, 'index'])->name('orders.queue');
     Route::get('/Dine-in', [dineInController::class, 'index'])->name('dine.in');
     Route::get('/reservation/Dashboard', [reservationDashboardController::class, 'index'])->name('reservation.dashboard');
-    Route::get('/menu', [menuController::class, 'index']);
+    
     Route::get('/Transaction', function () {
         return view('Transaction_Dashboard');
     })->name('transaction.index');

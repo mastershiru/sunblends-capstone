@@ -21,6 +21,7 @@ class GoogleLoginController extends Controller
     public function redirectToGoogle()
     {
         return Socialite::driver('google')
+            ->stateless()
             ->with(['hd' => 'tua.edu.ph']) // Optional: restrict to TUA domain
             ->redirect();
     }

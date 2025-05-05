@@ -42,8 +42,7 @@ Route::get('/advanced-menu', [MenuApiController::class, 'advancedMenu']);
 Route::get('/test/login', [LoginController::class, 'show']);
 
 // Google OAuth routes
-Route::get('/auth/google', [GoogleLoginController::class, 'redirectToGoogle']);
-Route::get('/auth/google/callback', [GoogleLoginController::class, 'handleGoogleCallback']);
+Route::get('/auth/google/url', [GoogleLoginController::class, 'getGoogleAuthUrl']);
 
 // Logout route
 Route::middleware('auth:sanctum')->post('/logout', [GoogleLoginController::class, 'logout']);
