@@ -26,7 +26,7 @@ function Login({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const API_BASE_URL = "https://api.sunblends.store/api";
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "https://api.sunblends.store/api";
 
   // Configure axios defaults for CSRF and credentials
   useEffect(() => {
