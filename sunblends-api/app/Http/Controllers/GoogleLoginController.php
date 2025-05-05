@@ -45,8 +45,8 @@ class GoogleLoginController extends Controller
             // Check if email is from TUA domain (optional - you can also enforce this in the redirectToGoogle method)
             if (!str_ends_with($googleUser->getEmail(), '@tua.edu.ph')) {
                 \Log::warning('Non-TUA email attempted login', ['email' => $googleUser->getEmail()]);
-                return redirect()->away(env('FRONTEND_URL', 'https://sunblends.store') . 
-                    '/login?error=' . urlencode('Please use your TUA organizational email (@tua.edu.ph) to login.'));
+                return redirect()->away('https://sunblends.store') . 
+                    '/login?error=' . urlencode('Please use your TUA organizational email (@tua.edu.ph) to login.');
             }
 
             // Check if customer already exists or create a new one
@@ -98,7 +98,7 @@ class GoogleLoginController extends Controller
             );
             
             // Redirect to frontend with token
-            $frontendUrl = env('FRONTEND_URL', 'https://sunblends.store');
+            $frontendUrl = 'https://sunblends.store';
             $callbackUrl = "{$frontendUrl}/auth/callback?token={$token}&user=" . urlencode(json_encode($userData));
             
             return redirect()->away($callbackUrl)->withCookie($sessionCookie);
@@ -109,8 +109,8 @@ class GoogleLoginController extends Controller
             ]);
             
             // Redirect back to frontend with error
-            return redirect()->away(env('FRONTEND_URL', 'https://sunblends.store') . 
-                '/login?error=' . urlencode('Google authentication failed. Please try again.'));
+            return redirect()->away('https://sunblends.store') . 
+                '/login?error=' . urlencode('Google authentication failed. Please try again.');
         }
     }
 
