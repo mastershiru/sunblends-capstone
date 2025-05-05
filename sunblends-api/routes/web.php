@@ -37,7 +37,7 @@ Route::middleware(['customer_view'])->group(function () {
     // Your customer-specific routes
 });
 
-Route::get('/menu', [menuController::class, 'index']);
+Route::get('/menu', [menuController::class, 'index'])->name('menu.index');
 
 // Employee routes with base employee authentication
 Route::middleware(['employee_view'])->group(function () {

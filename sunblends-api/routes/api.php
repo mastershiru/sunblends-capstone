@@ -41,7 +41,6 @@ Route::get('/advanced-menu', [MenuApiController::class, 'advancedMenu']);
 
 Route::get('/test/login', [LoginController::class, 'show']);
 
-// Google OAuth routes
 Route::get('/auth/google/url', [GoogleLoginController::class, 'getGoogleAuthUrl']);
 
 // Logout route
