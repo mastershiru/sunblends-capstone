@@ -3,7 +3,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "../../assets/css/modal.css";
 import axios from "axios";
 import Forgotpassword from "./forgot.password";
@@ -24,6 +24,7 @@ function Login({
 }) {
   const [isOpenForgotpassword, setIsOpenForgotpassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || "https://api.sunblends.store/api";
 
@@ -37,7 +38,16 @@ function Login({
       .catch(error => {
         console.error("Error fetching CSRF cookie:", error);
       });
-  }, [API_BASE_URL]);
+      
+    // Check for error query parameter (from OAuth redirect)
+    const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+    if (error) {
+      toast.error(decodeURIComponent(error), {
+        position: "top-right",
+      });
+    }
+  }, [location, API_BASE_URL]);
 
   const handleForgotpassword = () => {
     setIsOpenForgotpassword(true);
@@ -106,6 +116,7 @@ function Login({
       });
   }
 
+  // Option 1: Keep the existing client-side Google login flow
   const handleGoogleLogin = (credentialResponse) => {
     const credentialResponseDecoded = jwtDecode(credentialResponse.credential);
     const { name, email, picture } = credentialResponseDecoded;
@@ -186,6 +197,11 @@ function Login({
       });
   };
 
+  // Option 2: Use server-side OAuth flow (recommended)
+  const handleServerSideGoogleLogin = () => {
+    window.location.href = `${API_BASE_URL}/auth/google`;
+  };
+
   return (
     <>
       {isOpenLogin && (
@@ -246,6 +262,7 @@ function Login({
                     Sign In
                   </button>
 
+                  {/* Option 1: Client-side Google OAuth (original implementation) */}
                   <div
                     className="google-login"
                     style={{
@@ -261,6 +278,27 @@ function Login({
                       }}
                     />
                   </div>
+                  
+                  {/* Option 2: Use server-side OAuth flow (recommended) */}
+                  <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                    <p style={{ margin: '5px 0' }}>Or</p>
+                    <button 
+                      type="button"
+                      onClick={handleServerSideGoogleLogin}
+                      style={{ 
+                        backgroundColor: '#4285F4',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 15px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        width: '100%'
+                      }}
+                    >
+                      Sign in with Google (Server OAuth)
+                    </button>
+                  </div>
                 </div>
                 <div className="form-element">
                   <button
@@ -274,19 +312,6 @@ function Login({
                     Employee Login
                   </button>
                 </div>
-                {/* <p className="no-account">
-                  Don't have an account?{" "}
-                  <button
-                    id="signup-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toggleModalLogin(false);
-                      toggleModalRegister(true);
-                    }}
-                  >
-                    Sign Up
-                  </button>
-                </p> */}
               </form>
             </div>
           </div>

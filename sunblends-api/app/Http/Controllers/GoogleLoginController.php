@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 use App\Models\Customer;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -18,7 +20,9 @@ class GoogleLoginController extends Controller
      */
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')
+            ->with(['hd' => 'tua.edu.ph']) // Optional: restrict to TUA domain
+            ->redirect();
     }
 
     /**
@@ -37,14 +41,21 @@ class GoogleLoginController extends Controller
                 'name' => $googleUser->getName()
             ]);
 
+            // Check if email is from TUA domain (optional - you can also enforce this in the redirectToGoogle method)
+            if (!str_ends_with($googleUser->getEmail(), '@tua.edu.ph')) {
+                \Log::warning('Non-TUA email attempted login', ['email' => $googleUser->getEmail()]);
+                return redirect()->away(env('FRONTEND_URL', 'https://sunblends.store') . 
+                    '/login?error=' . urlencode('Please use your TUA organizational email (@tua.edu.ph) to login.'));
+            }
+
             // Check if customer already exists or create a new one
             $customer = Customer::firstOrCreate(
                 ['customer_email' => $googleUser->getEmail()],
                 [
                     'customer_name' => $googleUser->getName(),
-                    'customer_password' => Hash::make(str_random(16)), // Random secure password
+                    'customer_password' => Hash::make(Str::random(16)), // Random secure password
                     'customer_picture' => $googleUser->getAvatar(),
-                    'customer_number' => 'N/A', // Handle missing number
+                    'customer_number' => 'N/A', // Default phone number
                     'role_id' => 4, // Customer role
                 ]
             );
@@ -64,12 +75,32 @@ class GoogleLoginController extends Controller
                 'guard' => 'customer'
             ]);
             
-            // Redirect to frontend with token
-            return redirect()->away("https://sunblends.store/auth/callback?token={$token}&user=" . json_encode([
+            // Create a user data object to pass to frontend
+            $userData = [
                 'customer_id' => $customer->customer_id,
-                'name' => $customer->customer_name,
-                'email' => $customer->customer_email
-            ]));
+                'customer_name' => $customer->customer_name,
+                'customer_email' => $customer->customer_email,
+                'customer_picture' => $customer->customer_picture
+            ];
+            
+            // Set session cookie with proper domain settings
+            $sessionCookie = cookie(
+                'laravel_session', 
+                Session::getId(), 
+                120,     // minutes
+                '/',     // path
+                '.sunblends.store', // domain - note the leading dot to include all subdomains
+                true,    // secure (HTTPS only)
+                false,   // httpOnly
+                false,   // raw
+                'none'   // sameSite policy
+            );
+            
+            // Redirect to frontend with token
+            $frontendUrl = env('FRONTEND_URL', 'https://sunblends.store');
+            $callbackUrl = "{$frontendUrl}/auth/callback?token={$token}&user=" . urlencode(json_encode($userData));
+            
+            return redirect()->away($callbackUrl)->withCookie($sessionCookie);
             
         } catch (\Exception $e) {
             \Log::error('Google callback error: ' . $e->getMessage(), [
@@ -77,13 +108,14 @@ class GoogleLoginController extends Controller
             ]);
             
             // Redirect back to frontend with error
-            return redirect()->away('https://sunblends.store/login?error=google_auth_failed');
+            return redirect()->away(env('FRONTEND_URL', 'https://sunblends.store') . 
+                '/login?error=' . urlencode('Google authentication failed. Please try again.'));
         }
     }
 
     /**
-     * Process frontend-initiated Google login
-     * This maintains compatibility with your existing implementation
+     * Legacy method to support the existing frontend implementation
+     * This can be kept for backward compatibility
      */
     public function googleLogin(Request $request)
     {
@@ -96,7 +128,7 @@ class GoogleLoginController extends Controller
             'customer_name' => 'required|string',
             'customer_email' => 'required|email',
             'customer_picture' => 'nullable|string',
-            'Customer_number' => 'nullable|string',
+            'Customer_Number' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -104,14 +136,22 @@ class GoogleLoginController extends Controller
         }
 
         try {
+            // Check if email is from TUA domain
+            if (!str_ends_with($request->customer_email, '@tua.edu.ph')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please use your TUA organizational email (@tua.edu.ph) to login.'
+                ], 400);
+            }
+
             // Check if customer already exists or create a new one
             $customer = Customer::firstOrCreate(
                 ['customer_email' => $request->customer_email],
                 [
                     'customer_name' => $request->customer_name,
-                    'customer_password' => Hash::make(str_random(16)),
+                    'customer_password' => Hash::make(Str::random(16)),
                     'customer_picture' => $request->customer_picture,
-                    'customer_number' => $request->Customer_number ?? 'N/A',
+                    'customer_number' => $request->Customer_Number ?? 'N/A',
                     'role_id' => 4,
                 ]
             );
