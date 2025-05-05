@@ -18,7 +18,7 @@ class GoogleLoginController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function redirectToGoogle()
+    public function redirectToGoogle(Request $request)
     {
         try {
             // Get the base URL of the application
@@ -29,11 +29,21 @@ class GoogleLoginController extends Controller
             
             \Log::info('Redirecting to Google OAuth with callback URL: ' . $redirectUrl);
             
-            return Socialite::driver('google')
+            $socialiteBuilder = Socialite::driver('google')
                 ->stateless()
-                ->redirectUrl($redirectUrl) // Explicitly set the redirect URL
-                ->with(['hd' => 'tua.edu.ph'])
-                ->redirect();
+                ->redirectUrl($redirectUrl); // Explicitly set the redirect URL
+            
+            // Force account selection if prompt parameter is provided
+            if ($request->has('prompt') && $request->prompt === 'select_account') {
+                $socialiteBuilder = $socialiteBuilder->with([
+                    'prompt' => 'select_account',
+                    'hd' => 'tua.edu.ph'
+                ]);
+            } else {
+                $socialiteBuilder = $socialiteBuilder->with(['hd' => 'tua.edu.ph']);
+            }
+            
+            return $socialiteBuilder->redirect();
         } catch (\Exception $e) {
             \Log::error('Error redirecting to Google: ' . $e->getMessage());
             return redirect()->away('https://sunblends.store/login?error=' . 
@@ -236,20 +246,21 @@ class GoogleLoginController extends Controller
                 $request->user()->tokens()->delete();
             }
             
-            // Clear all guards
+            // Clear all Laravel guards
             Auth::guard('customer')->logout();
             Auth::guard('web')->logout();
             Auth::guard('sanctum')->logout();
             
-            // Clear all session data
-            if ($request->hasSession()) {
-                $request->session()->flush();
-                $request->session()->invalidate();
-                $request->session()->regenerate();
-            }
+            // Clear Google session cookies
+            $googleCookies = ['GSID', 'NID', 'SID', 'HSID', 'SSID'];
+            $response = response()->json([
+                'success' => true,
+                'message' => 'Successfully logged out',
+                'cleared_session' => true,
+            ]);
             
-            // Create an array of cookies to clear
-            $cookiesToClear = [
+            // Clear Laravel session cookies
+            $laravelCookies = [
                 'laravel_session',
                 'XSRF-TOKEN',
                 'remember_web',
@@ -257,15 +268,8 @@ class GoogleLoginController extends Controller
                 'sunblends_session'
             ];
             
-            // Build response
-            $response = response()->json([
-                'success' => true,
-                'message' => 'Successfully logged out',
-                'cleared_session' => true,
-            ]);
-            
             // Clear all cookies
-            foreach ($cookiesToClear as $cookieName) {
+            foreach (array_merge($laravelCookies, $googleCookies) as $cookieName) {
                 $response->withCookie(
                     cookie()->forget($cookieName)
                 );
@@ -280,6 +284,16 @@ class GoogleLoginController extends Controller
                 $response->withCookie(
                     cookie($cookieName, '', -1, '/', 'api.sunblends.store')
                 );
+                $response->withCookie(
+                    cookie($cookieName, '', -1, '/', '.google.com')
+                );
+            }
+            
+            // Clear session data
+            if ($request->hasSession()) {
+                $request->session()->flush();
+                $request->session()->invalidate();
+                $request->session()->regenerate();
             }
             
             return $response;

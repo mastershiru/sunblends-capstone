@@ -199,7 +199,7 @@ function Login({
 
   // Option 2: Use server-side OAuth flow (recommended)
   const handleServerSideGoogleLogin = () => {
-    window.location.href = `https://api.sunblends.store/auth/google`;
+    window.location.href = `https://api.sunblends.store/auth/google?prompt=select_account`;
   };
 
   return (
