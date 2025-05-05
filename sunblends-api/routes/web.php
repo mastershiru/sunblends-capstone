@@ -27,6 +27,9 @@ Route::get('/employee/login', function () {
 Route::post('/login', [LoginController::class, 'login'])->name('login');
 Route::get('/logout', [LogoutController::class, 'logout'])->name('logout');
 
+// Google OAuth routes
+Route::get('/auth/google', [GoogleLoginController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback', [GoogleLoginController::class, 'handleGoogleCallback']);
 
 // Customer routes
 Route::middleware(['customer_view'])->group(function () {
