@@ -20,10 +20,25 @@ class GoogleLoginController extends Controller
      */
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')
-            ->stateless()
-            ->with(['hd' => 'tua.edu.ph']) // Optional: restrict to TUA domain
-            ->redirect();
+        try {
+            // Get the base URL of the application
+            $baseUrl = config('app.url');
+            
+            // Construct a redirect URL without /api prefix
+            $redirectUrl = $baseUrl . '/auth/google/callback';
+            
+            \Log::info('Redirecting to Google OAuth with callback URL: ' . $redirectUrl);
+            
+            return Socialite::driver('google')
+                ->stateless()
+                ->redirectUrl($redirectUrl) // Explicitly set the redirect URL
+                ->with(['hd' => 'tua.edu.ph'])
+                ->redirect();
+        } catch (\Exception $e) {
+            \Log::error('Error redirecting to Google: ' . $e->getMessage());
+            return redirect()->away('https://sunblends.store/login?error=' . 
+                urlencode('Failed to connect to Google. Please try again.'));
+        }
     }
 
     /**
@@ -45,8 +60,8 @@ class GoogleLoginController extends Controller
             // Check if email is from TUA domain (optional - you can also enforce this in the redirectToGoogle method)
             if (!str_ends_with($googleUser->getEmail(), '@tua.edu.ph')) {
                 \Log::warning('Non-TUA email attempted login', ['email' => $googleUser->getEmail()]);
-                return redirect()->away('https://sunblends.store') . 
-                    '/login?error=' . urlencode('Please use your TUA organizational email (@tua.edu.ph) to login.');
+                return redirect()->away('https://sunblends.store/login?error=' . 
+                    urlencode('Please use your TUA organizational email (@tua.edu.ph) to login.'));
             }
 
             // Check if customer already exists or create a new one
@@ -109,8 +124,8 @@ class GoogleLoginController extends Controller
             ]);
             
             // Redirect back to frontend with error
-            return redirect()->away('https://sunblends.store') . 
-                '/login?error=' . urlencode('Google authentication failed. Please try again.');
+            return redirect()->away('https://sunblends.store' . 
+                '/login?error=' . urlencode('Google authentication failed. Please try again.'));
         }
     }
 
