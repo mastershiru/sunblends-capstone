@@ -14,7 +14,7 @@ import BookingTable from "./components/reservation";
 import NotificationManager from "./components/notifications/Notification-manager";
 import RouteGuard from './utils/RouteGuard';
 import NotificationModal from "./components/modal-compinents/notification-modal";
-
+import AuthCallback from "./components/auth/AuthCallBack";
 
 
 
@@ -28,6 +28,7 @@ function App() {
         <Modals />
         <RouteGuard>
         <Routes>
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/" element={<Home />} />
           <Route path="/admin-section" element={<AdminSection />} />
           <Route path="/allMenu" element={<AllMenu />} />
