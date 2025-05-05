@@ -41,7 +41,12 @@ Route::get('/advanced-menu', [MenuApiController::class, 'advancedMenu']);
 
 Route::get('/test/login', [LoginController::class, 'show']);
 
-Route::post('/auth/google/callback', [GoogleLoginController::class, 'googleLogin']);
+// Google OAuth routes
+Route::get('/auth/google', [GoogleLoginController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback', [GoogleLoginController::class, 'handleGoogleCallback']);
+
+// Logout route
+Route::middleware('auth:sanctum')->post('/logout', [GoogleLoginController::class, 'logout']);
 
 Route::post('/reservation/create', [reservationController::class, 'create']);
 Route::get('reservations/customer/{customerId}', [ReservationController::class, 'getCustomerReservations']);
