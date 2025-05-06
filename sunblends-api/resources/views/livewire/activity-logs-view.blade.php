@@ -227,7 +227,7 @@
                                 <p><span class="text-gray-600">Date & Time:</span> {{ $selectedLog->created_at->format('F d, Y h:i:s A') }}</p>
                                 <p><span class="text-gray-600">Log ID:</span> {{ $selectedLog->id }}</p>
                                 <p><span class="text-gray-600">Type:</span> {{ $selectedLog->log_name }}</p>
-                                <p><span class="text-gray-600">IP Address:</span> {{ $selectedLog->properties['ip_address'] ?? 'N/A' }}</p>
+                                
                                 <p><span class="text-gray-600">Description:</span> {{ $this->getDetailedDescription($selectedLog) }}</p>
                             </div>
                         </div>
