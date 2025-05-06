@@ -163,13 +163,13 @@ class ActivityLogsView extends Component
         // If no subject type, return base description with enhancements
         if (!$subjectType) {
             if (str_contains($log->description, 'logged in')) {
-                $ipAddress = $properties['ip_address'] ?? 'unknown IP';
-                return "User logged in from {$ipAddress}";
+                
+                return "User logged in ";
             }
             
             if (str_contains($log->description, 'logged out')) {
-                $ipAddress = $properties['ip_address'] ?? 'unknown IP';
-                return "User logged out from {$ipAddress}";
+                
+                return "User logged out ";
             }
             
             return $log->description;
