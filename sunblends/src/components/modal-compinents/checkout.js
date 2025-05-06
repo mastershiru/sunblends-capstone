@@ -44,7 +44,7 @@ const Checkout = ({
       // Convert to minutes for easier comparison
       const currentTimeInMinutes = hour * 60 + minutes;
       const openingTimeInMinutes = 5 * 60; // 5:00 AM
-      const closingTimeInMinutes = 19 * 60; // 5:00 PM
+      const closingTimeInMinutes = 23 * 60 + 59; // 5:00 PM
 
       // Within operating hours if current time is >= opening and < closing
       const isOpen =
