@@ -263,25 +263,25 @@ function Login({
                   </button>
 
                   {/* Option 1: Client-side Google OAuth (original implementation) */}
-                  <div
-                    className="google-login"
-                    style={{
-                      marginTop: "10px",
-                    }}
-                  >
-                    <GoogleLogin
-                      onSuccess={handleGoogleLogin}
-                      onError={() => {
-                        toast.error("Google login failed", {
-                          position: "top-right",
-                        });
-                      }}
-                    />
-                  </div>
+                  // <div
+                  //   className="google-login"
+                  //   style={{
+                  //     marginTop: "10px",
+                  //   }}
+                  // >
+                  //   <GoogleLogin
+                  //     onSuccess={handleGoogleLogin}
+                  //     onError={() => {
+                  //       toast.error("Google login failed", {
+                  //         position: "top-right",
+                  //       });
+                  //     }}
+                  //   />
+                  // </div>
                   
                   {/* Option 2: Use server-side OAuth flow (recommended) */}
                   <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                    <p style={{ margin: '5px 0' }}>Or</p>
+                    // <p style={{ margin: '5px 0' }}>Or</p>
                     <button 
                       type="button"
                       onClick={handleServerSideGoogleLogin}
