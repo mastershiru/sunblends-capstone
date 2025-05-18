@@ -279,10 +279,10 @@ function Login({
                   //   />
                   // </div>
                    */}
-                   
+
                   {/* Option 2: Use server-side OAuth flow (recommended) */}
                   <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                    // <p style={{ margin: '5px 0' }}>Or</p>
+                    <p style={{ margin: '5px 0' }}>Or</p>
                     <button 
                       type="button"
                       onClick={handleServerSideGoogleLogin}
