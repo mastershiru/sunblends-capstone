@@ -263,7 +263,7 @@ function Login({
                   </button>
 
                   {/* Option 1: Client-side Google OAuth (original implementation) */}
-                  // <div
+                  {/* // <div
                   //   className="google-login"
                   //   style={{
                   //     marginTop: "10px",
@@ -278,7 +278,8 @@ function Login({
                   //     }}
                   //   />
                   // </div>
-                  
+                   */}
+                   
                   {/* Option 2: Use server-side OAuth flow (recommended) */}
                   <div style={{ marginTop: '10px', textAlign: 'center' }}>
                     // <p style={{ margin: '5px 0' }}>Or</p>
